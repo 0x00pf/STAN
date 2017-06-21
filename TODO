@@ -1,0 +1,8 @@
+TODO
+------------
+* Add user comments
+* Save/Load SREP files (STAN Reverse Engineering Projects :)
+* Process functions
+*  Identify local vars
+* Process globals
+

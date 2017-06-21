@@ -1,0 +1,273 @@
+/*
+  STAN STAN is a sTAtic aNalyser
+  Copyright (c) 2017 pico
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+/*
+ * A case is a project you are working on!
+ *
+ */
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+
+#include "case.h"
+#include "core.h"
+#include "symb.h"
+#include "utils.h"
+
+/* Constructor/Destructor */
+STAN_CASE *
+stan_case_new (char *id)
+{
+  STAN_CASE *c;
+
+  if ((c = malloc (sizeof(STAN_CASE))) == NULL)
+    {
+      fprintf (stderr, "Cannot allocate memory for case\n");
+      return NULL;
+    }
+  if (!id) c->id = strdup ("corpse");
+  else c->id = strdup (id);
+
+  c->k = NULL;
+
+  return c;
+}
+
+int        
+stan_case_free (STAN_CASE *c)
+{
+  if (!c) return -1;
+  if (c->id) return -1;
+
+  free (c->id);
+  stan_core_free (c->k);
+  free (c);
+
+  return 0;
+}
+
+int
+stan_case_dump (STAN_CASE *c)
+{
+  if (!c) return -1;
+  printf ("--------------------------------------\n");
+  printf ("CASE: '%s'\n", c->id);
+  if (!c->k)
+    {
+      fprintf (stderr, "- No core set for this case\n");
+      return -1;
+    }
+  printf ("CORE: %p\n", c->k);
+  printf ("......................................\n");
+  stan_core_dump (c->k);
+  printf ("--------------------------------------\n");
+  return 0;
+}
+
+/* Accessors */
+
+// probably remove this one!!!
+int        
+stan_case_changed (STAN_CASE *c)
+{
+  if (!c) return -1;
+  c->dirty = 1;
+  // 
+  return 0;
+}
+
+int        
+stan_case_set_core (STAN_CASE *c, STAN_CORE *k)
+{
+  if (!c) return -1;
+  if (!k) return -1;
+
+  c->k = k;
+
+  return 0;
+}
+
+int        
+stan_case_set_core_from_file (STAN_CASE *c, char *fname)
+{
+  if (!c) return -1;
+
+  return 0;
+}
+
+// For future implementation
+int
+stan_case_save (STAN_CASE *c, char *fname)
+{
+  FILE  *f;
+  int   i, j, n;
+  STAN_IMETA *im;
+  STAN_SYM *s;
+  STAN_SEGMENT *sec;
+  char *fname1;
+
+  if (!c) return -1;
+
+  n = strlen (c->k->fname);
+  fname1 = malloc (n + 6);
+  sprintf (fname1, "%s.srep", c->k->fname);
+  if ((f = fopen (fname1, "wt")) == NULL)
+    {
+      fprintf (stderr, "- Cannot save to file '%s'\n", fname1);
+      return -1;
+    }
+  //fprintf (f, "CASE: %s\n", c->id);
+  // Dump Renamed Symbols
+  n = c->k->sym->n;
+  for (i = 0; i < n; i++)
+    {
+      s = (STAN_SYM*) c->k->sym->p[i];
+      if (s->dump)
+	fprintf (f, "S:%s:%p\n", s->id, (void*)s->addr);
+    }
+  // Dump Renamed Labels
+  n = c->k->label->n;
+  for (i = 0; i < n; i++)
+    {
+      s = (STAN_SYM*)c->k->label->p[i];
+      if (s->dump)
+	fprintf (f, "L:%s:%p\n", s->id, (void*)s->addr);
+    }
+  // Dump Renamed Functions
+  n = c->k->func->n;
+  for (i = 0; i < n; i++)
+    {
+      s = (STAN_SYM*)c->k->func->p[i];
+      if (s->dump)
+	fprintf (f, "F:%s:%p\n", s->id, (void*)s->addr);
+    }
+  n = c->k->sec->n;
+  cs_insn *ins;
+  for (i = 0; i < n; i++)
+    {
+      sec = (STAN_SEGMENT*) c->k->sec->p[i];
+      for (j = 0; j < sec->count; j++ )
+	{
+	  im = &sec->imeta[j];
+	  ins = &sec->ins[j];
+	  //printf ("--> %d im:%p addr:%p\n", j, im, im->addr);
+	  if (im->comment)
+	    fprintf (f, "C:%d:%p:%s\n", i, (void*)ins->address, im->comment);
+	}
+    }
+  fclose (f);
+  return 0;
+}
+
+STAN_CASE *
+stan_case_load (STAN_CASE *c, char *fname)
+{
+  FILE *f;
+  char buffer[1024];
+  STAN_SYM *s;
+
+  if ((f = fopen (fname, "rt")) == NULL)
+    {
+      fprintf (stderr, "- Cannot open file '%s'\n", fname);
+      return NULL;
+    }
+  while (!feof (f))
+    {
+      if (!fgets (buffer, 1024, f)) break;
+      if (buffer[strlen(buffer) - 1] == '\n') 
+	buffer[strlen(buffer) - 1] = 0;
+      //printf ("Read: '%s'\n", buffer);
+      switch (buffer[0])
+	{
+	case 'S':
+	  {
+	    char *name, *saddr;
+	    long addr;
+	    name = strtok (buffer + 2, ":");
+	    saddr = strtok (NULL, ":");
+	    printf ("-> SYMBOL: '%s' '%s'\n", name, saddr + 2);
+	    addr =strtol (saddr + 2, NULL, 16);
+	    if ((s = (STAN_SYM*) stan_table_find (c->k->sym, addr)))
+	      {
+		if (s->id) free (s->id);
+		s->id = strdup (name);
+	      }
+	    else
+	      {
+		s = stan_sym_new (name, addr);
+		stan_table_add (c->k->sym, (STAN_ITEM*)s);
+	      }
+	    break;
+	  }
+	case 'L':
+	  {
+	    char *name, *saddr;
+	    long  addr;
+
+	    name = strtok (buffer + 2, ":");
+	    saddr = strtok (NULL, ":");
+
+	    addr =strtol (saddr + 2, NULL, 16);
+	    printf ("-> LABEL: '%s' '%p'\n", name, (void*)addr);
+	    stan_core_rename_label_at (c->k, addr, name);
+	    break;
+
+	  }
+
+	case 'F':
+	  {
+	    char *name, *saddr;
+	    long addr;
+	    name = strtok (buffer + 2, ":");
+	    saddr = strtok (NULL, ":");
+	    addr =strtol (saddr + 2, NULL, 16);
+
+	    if (stan_core_rename_func_at (c->k, addr, name) < 0)
+	      stan_core_def_func (c->k, name, addr);
+	    printf ("-> FUNCTION: '%s' '%p'\n", name, (void*)addr);
+	    break;
+
+	  }
+ 
+	case 'C':
+	  {
+	    char *s, *comment, *saddr;
+	    long addr;
+	    s = strtok (buffer + 2, ":");
+	    saddr = strtok (NULL, ":");
+	    comment = strtok (NULL, ":");
+	    addr = strtol (saddr + 2, NULL, 16);
+	    printf ("-> COMMENT: '%s' '%p'\n", comment, (void*) addr);
+	    stan_core_add_comment (c->k, addr, comment);
+	    break;
+
+	  }
+
+	default:
+	  printf ("invalid field '%s'\n", buffer);
+	  continue;
+	}
+      
+    }
+  fclose (f);
+  return NULL;
+}
+
+
