@@ -132,9 +132,11 @@ _stan_dis_op (STAN_CORE *k, STAN_SEGMENT *s, int i)
 
       if (detail->x86.operands[j].type == X86_OP_IMM)
 	{
+/*
 	  if (detail->x86.operands[j].imm < 255 && isprint (detail->x86.operands[j].imm))
 	    printf ("# "BG_LBLUE"'%c'" RESET, (unsigned char)detail->x86.operands[j].imm);
 	  else
+*/
 	    {
 	      aux =stan_dis_check_ptr (k, detail->x86.operands[j].imm);
 	      if (aux) 
