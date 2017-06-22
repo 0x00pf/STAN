@@ -36,6 +36,7 @@
 #define FG_MAGENTA "\033[1;35m"
 #define FG_LBLUE "\033[0;34m"
 #define FG_LWHITE "\033[1;37m"
+#define FG_NORMAL "\033[0;37m"
 
 #define BG_LMAGENTA "\033[37;1;45;0m"
 #define BG_RED2 "\033[0;37;1;41m"

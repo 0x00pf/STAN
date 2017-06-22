@@ -49,8 +49,8 @@ static char *stan_core_type_str[] = {"Unknown", "ELF64", "ELF32", "RAW", NULL};
 static char *stan_core_os_str[] = {"Unknown", "BareMetal", "Linux", NULL};
 static char *stan_core_arch_str[] = {"Unknown", "X86", "ARM", NULL};
 static int  capstone_arch[] = {CS_ARCH_MAX, CS_ARCH_X86, CS_ARCH_ARM, -1};
-static char *stan_core_mode_str[] = {"Unknown", "32bits", "64bits", "ARM", NULL};
-static int  capstone_mode[] = {-1, CS_MODE_32, CS_MODE_64, CS_MODE_ARM, -1};
+static char *stan_core_mode_str[] = {"Unknown", "32bits", "64bits", "ARM32", "ARM-Thumb", NULL};
+static int  capstone_mode[] = {-1, CS_MODE_32, CS_MODE_64, CS_MODE_ARM, CS_MODE_THUMB, -1};
 static char *stan_core_valid_str[] = {"INVALID", "VALID", NULL};
 
 char *
@@ -277,12 +277,19 @@ stan_core_load (STAN_CORE *k, char *fname)
       return -1;
     }
   k->size = stan_util_get_file_size (k->fd);
+  /*
   if ((k->code = mmap (NULL, k->size, PROT_READ, //| PROT_WRITE,
 		       MAP_SHARED, k->fd, 0)) == MAP_FAILED)
     {
       perror ("mmap:");
       exit (1);
     } 
+  */
+  k->code = malloc (k->size);
+  read (k->fd, k->code, k->size);
+  close (k->fd);
+
+
   k->fname = strdup (fname);
   k->valid = STAN_CORE_VALID;
   printf ("+ Loaded '%s' %ld bytes\n", k->fname, k->size);
@@ -307,11 +314,12 @@ stan_core_dump (STAN_CORE *k)
   printf ("+ Dumming Core\n");
   printf ("  - File         : %s\n", k->fname);
   printf ("  - Size         : %ld\n", k->size);
+  printf ("  - Entry Point  : %lx\n", k->ep);
   printf ("  - Type         : %s\n", stan_core_type_str[k->type]);
   printf ("  - Valid        : %s\n", stan_core_valid_str[k->valid]);
   //printf ("  - OS           : %s\n", stan_core_os_str[k->os]);
   printf ("  - Architecture : %s\n", stan_core_arch_str[k->arch]);
-  printf ("  - Mode         : %s\n", stan_core_mode_str[k->mode]);
+  printf ("  - Mode         : %s(%d)\n", stan_core_mode_str[k->mode], k->mode);
 
   // Dump Segments
   for (i = 0; i < k->seg->n; i++)
@@ -418,7 +426,8 @@ stan_core_set (STAN_CORE *k, int arch, int mode, int os)
 int        
 stan_core_identify (STAN_CORE *k)
 {
-  Elf64_Ehdr*  elf_hdr64;
+  Elf64_Ehdr*  elf_hdr64 = NULL;
+  Elf32_Ehdr*  elf_hdr32 = NULL;
 
   if (!k) return -1;
   if (k->valid == STAN_CORE_INVALID)
@@ -441,6 +450,7 @@ stan_core_identify (STAN_CORE *k)
   // Otherwise it is ELF and we process it
   // TODO: Refactor all this whenever the plugin system is in place
   elf_hdr64 = (Elf64_Ehdr *) k->code;
+  elf_hdr32 = (Elf32_Ehdr *) k->code;
 
   // TODO: For now we only support Linux
   k->os = STAN_CORE_OS_LINUX;
@@ -460,19 +470,29 @@ stan_core_identify (STAN_CORE *k)
 	k->type = STAN_CORE_TYPE_ELF_32;
 	k->core_init = stan_elf32_init;
 	k->core_process = stan_elf32_process;
-  
+	k->ep = elf_hdr32->e_entry;
 
 	break;
       }
     case EM_X86_64:
       {
+	k->ep = elf_hdr64->e_entry;
 	break;
       }
     case EM_ARM:
       {
 	k->arch = STAN_CORE_ARCH_ARM;
-	k->mode = STAN_CORE_MODE_ARM;
+
 	k->type = STAN_CORE_TYPE_ELF_32;
+	k->ep = elf_hdr32->e_entry;
+	// https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git/tree/arch/arm/kernel/elf.c
+#if 0
+	if ((k->ep & 1))
+	  k->mode = STAN_CORE_MODE_THUMB;
+	else if (!(k->ep & 3))
+	  k->mode = STAN_CORE_MODE_ARM;
+#endif
+	k->mode = STAN_CORE_MODE_ARM;
 	k->core_init = stan_elf32_init;
 	k->core_process = stan_elf32_process;
 

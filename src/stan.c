@@ -49,6 +49,7 @@ static char *cmd[] = {
   "comment.add",
   "comment.del",
   "mem.dump",
+  "mem.poke",
   "func.def",
   "sym.def",
   "help.abi",
@@ -274,6 +275,23 @@ run_cmd (STAN_CASE *c, char *buffer1)
 	  return 0;
 	}
       stan_dis_dump_block (c->k, fmt, addr, len);
+    }
+  else if (!strncasecmp (buffer, "mem.poke", strlen ("mem.poke")))
+    {
+      char fmt[1024];
+      char str[1024];
+      long addr;
+      int  narg;
+
+      // FIXME:... what can I say... I'm feeling lazy
+      //       Just minimal functionality  
+      char *aux= buffer + strlen ("mem.poke ");
+      if ((narg = sscanf (aux, "%s %p %s", fmt, (void**) &addr, str)) != 3)
+	{
+	  fprintf (stderr, "Invalid number of parameters\n");
+	  return 0;
+	}
+      stan_dis_poke_block (c->k, fmt, addr, str);
     }
 
 

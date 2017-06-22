@@ -45,6 +45,8 @@ char *mnemonic_color[] = {
 
 /* Local functions */
 /****************************************************/
+
+
 static int
 _stan_dis_op (STAN_CORE *k, STAN_SEGMENT *s, int i)
 {
@@ -79,7 +81,7 @@ _stan_dis_op (STAN_CORE *k, STAN_SEGMENT *s, int i)
 	      aux = stan_dis_check_ptr (k, eip + detail->x86.operands[j].mem.disp + ins->size);
 	      if (aux) 
 		{
-		  printf ("# %s ", aux);
+		  printf ("# %s " RESET, aux);
 		  free (aux);
 		  aux = NULL;
 		}
@@ -116,7 +118,7 @@ _stan_dis_op (STAN_CORE *k, STAN_SEGMENT *s, int i)
 	      aux = stan_dis_check_ptr (k, ptr);
 	      if (aux) 
 		{
-		  printf ("# [%p] %s ", 
+		  printf ("# [%p] %s " RESET, 
 			  (void*)(eip + detail->arm.operands[j].mem.disp +  ins->size + 4), aux);
 		  free (aux);
 		  aux = NULL;
@@ -130,18 +132,36 @@ _stan_dis_op (STAN_CORE *k, STAN_SEGMENT *s, int i)
 	}
 
 
-      if (detail->x86.operands[j].type == X86_OP_IMM)
+      if (k->arch == STAN_CORE_ARCH_X86 && detail->x86.operands[j].type == X86_OP_IMM)
 	{
-/*
-	  if (detail->x86.operands[j].imm < 255 && isprint (detail->x86.operands[j].imm))
+	  
+	  if ((detail->x86.operands[j].imm < 255) && isprint ((int)(detail->x86.operands[j].imm & 0xff)))
 	    printf ("# "BG_LBLUE"'%c'" RESET, (unsigned char)detail->x86.operands[j].imm);
 	  else
-*/
+	  
 	    {
 	      aux =stan_dis_check_ptr (k, detail->x86.operands[j].imm);
 	      if (aux) 
 		{
-		  printf ("# %s ", aux);
+		  printf ("# %s " RESET, aux);
+		  free (aux);
+		  aux = NULL;
+		}
+	    }
+	}
+      else if (k->arch == STAN_CORE_ARCH_ARM && 
+	       detail->arm.operands[j].type == ARM_OP_IMM)
+	{
+	  
+	  if ((detail->arm.operands[j].imm < 255) && isprint ((int)(detail->arm.operands[j].imm & 0xff)))
+	    printf ("# "BG_LBLUE"'%c'" RESET, (unsigned char)detail->arm.operands[j].imm);
+	  else
+	  
+	    {
+	      aux =stan_dis_check_ptr (k, detail->arm.operands[j].imm);
+	      if (aux) 
+		{
+		  printf ("# %s " RESET, aux);
 		  free (aux);
 		  aux = NULL;
 		}
@@ -212,9 +232,9 @@ _stan_dis_inst (STAN_CORE *k, STAN_SEGMENT *s, int i)
   // Resolve addresses
   _stan_dis_op (k, s, i);
 
-  printf ("\n");
+  printf (" \n");
   if (im->comment)
-    stan_printf (FG_LWHITE, "%41s %s\n", ";", im->comment);
+    stan_printf (FG_LWHITE, "%41s %s\n" RESET, ";", im->comment);
 
   return 0;
 }
@@ -485,8 +505,10 @@ stan_dis_dump_mem (STAN_CORE *k, long addr)
 	      buffer[j++] = 'n';
 	      continue;
 	    }
+
 	  if (c[i] < 0x20) continue;
 	  buffer[j++] = c[i];
+	  if (c[i] == 0) break;
 	}
       buffer[j++] = '\'';
     }
@@ -531,10 +553,10 @@ stan_dis_check_ptr (STAN_CORE *k, long ptr)
 	    {
 	      str = stan_dis_dump_mem (k, (long)(k->code + sec->off + rel));
 	      if (!s)
-		  snprintf (buffer, 1024, FG_BLUE " %lx(%s+%lx) : " RESET BG_RED "%s" RESET,
+		  snprintf (buffer, 1024, FG_BLUE " %lx(%s+%lx) " RESET " : " BG_RED "%s" RESET,
 			    ptr, sec->id, rel, str);
 	      else
-		  snprintf (buffer, 1024, FG_BLUE " <%s> %lx(%s+%lx) : " RESET BG_RED "%s" RESET,
+		  snprintf (buffer, 1024, FG_BLUE " <%s> %lx(%s+%lx) " RESET " : " BG_RED "%s" RESET,
 			    s->id, ptr, sec->id, rel, str);
 
 	      
@@ -588,7 +610,7 @@ stan_dis_check_ptr (STAN_CORE *k, long ptr)
   
 }
 
-#define DUMP_SIZE 32
+#define DUMP_SIZE 16
 
 static int
 _dump_bytes (long addr, long len)
@@ -596,14 +618,22 @@ _dump_bytes (long addr, long len)
   int  i;
   char *ascii;
 
-  ascii = malloc (DUMP_SIZE);
+  ascii = malloc (DUMP_SIZE + 1);
+  memset (ascii, 0, DUMP_SIZE + 1);
   unsigned char *p = (unsigned char*)addr;
   for (i = 0; i < len; i++)
     {
+      if ((i > 0) & ((i % DUMP_SIZE) == 0)) 
+	{
+
+	  printf ("|%s\n", ascii);
+	  memset (ascii, 0, DUMP_SIZE);
+	}
       printf ("%02x ", p[i]);
-      ascii[i % DUMP_SIZE] = isprint (p[i]) ? p[i] : '.';
-      if ((i & (i % DUMP_SIZE)) == 0) printf ("|%s\n", ascii);
+      ascii[i % DUMP_SIZE] = ((isprint (p[i]) && (p[i] >= 0x20)) ? p[i] : '.');
+
     }
+  printf ("%*c", (DUMP_SIZE - (i % DUMP_SIZE)) * 3,' ');
   if ((i % DUMP_SIZE) != 0) printf ("|%s\n", ascii);
   else printf ("\n");
 
@@ -650,6 +680,52 @@ stan_dis_dump_block (STAN_CORE *k, char *fmt, long addr, long len)
   ptr = (long)(k->code + s->off + (addr - s->addr));
   if (!strcmp (fmt, "x")) _dump_bytes (ptr, len);
   else if (!strcmp (fmt, "p")) _dump_addresses (ptr, len);
+
+  return 0;
+}
+
+static int
+_poke_bytes (long addr, char *str)
+{
+  int  i, l = strlen (str);
+  char v, *p = str;
+  l >>= 1; 
+
+  v= 0;
+  for (i = 0; i < l; i++)
+    {
+      sscanf (p, "%02x", &v);
+      printf ("Wrote %02x to %p\n", v, (void*)((unsigned char*)addr + l));
+      *(unsigned char*)((unsigned char*)addr + l) = (unsigned char) v;
+
+      p+=2;
+    }
+  return 0;
+}
+
+int
+stan_dis_poke_block (STAN_CORE *k, char *fmt, long addr, char*str)
+{
+  STAN_SEGMENT   *s;
+  long           ptr;
+
+  if (!k) return -1;
+  if (!fmt) return -1;
+  if (!addr) return -1;
+  if (!str) return -1;
+
+  // Find segment for the provided address
+  if ((s = stan_core_find_func_section (k, addr)) == NULL)
+    {
+      fprintf (stderr, "- Cannot find code for address %p\n", (void*)addr);
+      return -1;
+    }
+  // Calculate real address
+
+  ptr = (long)(k->code + s->off + (addr - s->addr));
+  if (!strcmp (fmt, "x")) _poke_bytes (ptr, str);
+  else if (!strcmp (fmt, "s")) memcpy ((void*)ptr, (void*)str, strlen(str));
+  else if (!strcmp (fmt, "p")) *((int *)ptr) = atoi (str);
 
   return 0;
 }

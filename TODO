@@ -1,8 +1,27 @@
 TODO
 ------------
+* Update disassembly approach
+  - Ideas for the global analyser
+    - If symbols are available process them
+    - Then start at the entry point and recursively disassemble CALLs 
+      (we may do this anyway even if symbols are available. we will just get the same info)
+    - This will eventually produce a good map of available functions
+    - Also process jumps so we get full code coverage... 
+      * problem with dynamic jumps (jmp [REGISTER]). 
+  - Disassemble on demand.
+    - Run local analysis for the memory area to process
+      * Maybe just create labels on the flight for just that disaseemble???
+    - Then disassemble that area and dump it
+    - Maybe store data for functions so we retrieve all the data
+      when visiting them back
+* Process functions
+  - Identify local vars
+  - Deterine beginning and end
+  - Cross reference info?
+* Process globals (Can be added as symbols) [PARTIAL]
+
+DONE
+-------------------
 * Add user comments
 * Save/Load SREP files (STAN Reverse Engineering Projects :)
-* Process functions
-*  Identify local vars
-* Process globals
 

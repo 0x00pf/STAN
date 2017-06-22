@@ -46,7 +46,8 @@
 #define STAN_CORE_MODE_32      1
 #define STAN_CORE_MODE_64      2
 #define STAN_CORE_MODE_ARM     3
-#define STAN_CORE_MODE_LAST    3
+#define STAN_CORE_MODE_THUMB   4
+#define STAN_CORE_MODE_LAST    4
 
 #define STAN_CORE_INVALID      0
 #define STAN_CORE_VALID        1
@@ -122,6 +123,7 @@ typedef struct stan_core_t
   int        os;   // OS/ABI for the core
   int        arch; // Architecture of the core
   int        mode; // 32/64 bits
+  long       ep;   // Entry Point
   int        l_cnt;
   csh        handle;
   STAN_TABLE *seg;

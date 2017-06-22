@@ -28,6 +28,28 @@
 #include "cfg.h"
 #include "core.h"
 
+// XXX: This seems to be correct for functions
+//      We need to change the code to process the .text segment
+//      in chunks and disassemble functions independently
+//      Also to allow on-the-fly disassembly from any address
+//      
+//      The ana module will remain but it has to do more stuff
+//      and we will not store the code, but we will disassemble
+//      every time the user asks for it
+static int
+_stan_configure_arm (STAN_CORE *k, long addr)
+{
+  if (!k) return -1;
+  if (!addr) return -1;
+  
+  if (k->arch != STAN_CORE_ARCH_ARM) return -1;
+  if (addr & 1)
+    cs_option(k->handle, CS_OPT_MODE, CS_MODE_THUMB);
+  else
+    cs_option(k->handle, CS_OPT_MODE, CS_MODE_ARM);
+  return 0;
+}
+
 static int
 stan_ana_section (csh handle, STAN_CORE *k, STAN_SEGMENT *s)
 {
@@ -44,6 +66,8 @@ stan_ana_section (csh handle, STAN_CORE *k, STAN_SEGMENT *s)
   cs_option(handle, CS_OPT_DETAIL, CS_OPT_ON);
   cs_option(handle, CS_OPT_SKIPDATA, CS_OPT_ON);     
   cs_option(handle, CS_OPT_DETAIL, CS_OPT_ON);
+
+  _stan_configure_arm (k, s->addr);
 
   s->count = cs_disasm(handle, k->code + s->off, 
 		       s->size, s->addr, 0, &s->ins);
