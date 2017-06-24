@@ -29,6 +29,13 @@ extern "C" {
 #endif
 
   int  stan_ana_init (STAN_CORE *k);
+  int  stan_ana_init_dis (STAN_CORE *k);
+  int  stan_ana_close_dis (STAN_CORE *k);
+
+  //int stan_ana_process_current_code (STAN_CORE *k);
+
+  long stan_ana_process_addr (STAN_CORE *k, long addr);
+  long stan_ana_process_section ( STAN_CORE *k, STAN_SEGMENT *s);
 
 #ifdef __cplusplus
 }

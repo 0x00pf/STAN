@@ -124,8 +124,9 @@ stan_segment_free (STAN_SEGMENT *sg)
 
   //printf ("!! SEG Allocs: %d Frees:%d FREE(%s)\n", _st_seg_alloc, _st_seg_free + 1, sg->id);
   if (sg->id) free (sg->id);
+#if 0
   if (sg->ins) free (sg->ins);
-
+#endif
   free (sg);
   _st_seg_free ++;
   //printf ("!! Allocs: %d Frees:%d\n", _st_seg_alloc, _st_seg_free);
@@ -181,6 +182,7 @@ stan_core_new ()
   k->dsym = stan_table_new ((STAN_ITEM_FREE)stan_sym_free, sizeof(STAN_SYM*));
   k->func = stan_table_new ((STAN_ITEM_FREE)stan_sym_free,sizeof(STAN_SYM*));
   k->label = stan_table_new ((STAN_ITEM_FREE)stan_sym_free,sizeof(STAN_SYM*));
+  k->comment = stan_table_new ((STAN_ITEM_FREE)stan_comment_free,sizeof(STAN_SYM*));
 
   return k;
 }
@@ -201,7 +203,7 @@ stan_core_free (STAN_CORE *k)
   stan_table_free (k->dsym);
   stan_table_free (k->func);
   stan_table_free (k->label);
-
+  stan_table_free (k->comment);
   /*
   stan_table_free (k->seg, (STAN_ITEM_FREE) stan_segment_free);
   stan_table_free (k->sec, (STAN_ITEM_FREE)stan_segment_free);
@@ -236,6 +238,7 @@ stan_core_clean (STAN_CORE *k)
   stan_table_free (k->dsym);
   stan_table_free (k->func);
   stan_table_free (k->label);
+  stan_table_free (k->comment);
 
   munmap (k->code, k->size);
   close (k->fd);
@@ -251,7 +254,7 @@ stan_core_clean (STAN_CORE *k)
   k->dsym = stan_table_new ((STAN_ITEM_FREE)stan_sym_free, sizeof(STAN_SYM*));
   k->func = stan_table_new ((STAN_ITEM_FREE)stan_sym_free,sizeof(STAN_SYM*));
   k->label = stan_table_new ((STAN_ITEM_FREE)stan_sym_free,sizeof(STAN_SYM*));
-
+  k->comment = stan_table_new ((STAN_ITEM_FREE)stan_comment_free,sizeof(STAN_SYM*));
   /*  
   k->seg = stan_table_new (sizeof(STAN_SEGMENT*));
   k->sec = stan_table_new (sizeof(STAN_SEGMENT*));
@@ -267,6 +270,7 @@ stan_core_clean (STAN_CORE *k)
 int        
 stan_core_load (STAN_CORE *k, char *fname)
 {
+  int l;
   if (!k) return -1;
   if (!fname) return -1;
 
@@ -286,7 +290,12 @@ stan_core_load (STAN_CORE *k, char *fname)
     } 
   */
   k->code = malloc (k->size);
-  read (k->fd, k->code, k->size);
+  l = read (k->fd, k->code, k->size);
+  if (l < k->size)
+    {
+      fprintf (stderr, "... you lazy boy... do the proper reading!\n");
+      exit (1);
+    }
   close (k->fd);
 
 
@@ -615,6 +624,7 @@ stan_core_dump_label (STAN_CORE *k)
 }
 
 
+#if 0
 STAN_IMETA   *
 stan_imeta_new (STAN_CORE *k, STAN_SEGMENT *s)
 {
@@ -630,6 +640,40 @@ stan_imeta_new (STAN_CORE *k, STAN_SEGMENT *s)
     }
   memset (s->imeta, 0, sizeof(STAN_IMETA) * s->count);
   return s->imeta;
+}
+#endif 
+
+
+int
+stan_comment_free (STAN_COMMENT *c)
+{
+  if (!c) return -1;
+  if (c->id) free (c->id);
+  if (c->comment) free (c->comment);
+  return 0;
+}
+
+
+STAN_IMETA   *
+stan_imeta_new (STAN_CORE *k, STAN_SEGMENT *s)
+{
+  if (!k) return NULL;
+  //if (!s) return NULL;
+
+  if (k->count <= 0) return NULL;
+  //XXX: IMETA struct only holds pointer to symbols referenced in other tables
+  //     we do not have to delete them
+  if (k->imeta) free (k->imeta);
+  k->imeta = NULL;
+
+  if ((k->imeta = malloc (sizeof(STAN_IMETA) * k->count)) == NULL)
+    {
+      fprintf (stderr, "- Cannot allocate metadata for instructions\n");
+      return NULL;
+    }
+  memset (k->imeta, 0, sizeof(STAN_IMETA) * k->count);
+
+  return k->imeta;
 }
 
 // TO be moved to core_utils.c
@@ -874,57 +918,56 @@ stan_core_find_func_section (STAN_CORE *k, long addr)
 int           
 stan_core_add_comment (STAN_CORE *k, long addr, char *comment)
 {
-  STAN_SEGMENT *s;
-  int          i;
+  //STAN_SEGMENT *s;
+  STAN_COMMENT *c;
+  //int          i;
 
   if (!k) return -1;
   if (!addr) return -1;
   if (!comment) return -1;
-  if ((s = stan_core_find_func_section (k, addr)) == NULL)
+
+  // Find addr in comment table
+  if ((c = (STAN_COMMENT*) stan_table_find (k->comment, addr)) == NULL)
     {
-      fprintf (stderr, "- Cannot find code for address %p\n", (void*)addr);
-      return -1;
+      // Add comment
+      c = (STAN_COMMENT*) malloc (sizeof (STAN_COMMENT));
+      c->addr = addr;
+      c->comment = strdup (comment);
+      c->id = strdup ("NONAME"); // We do not need this
+      stan_table_add (k->comment, (STAN_ITEM*)c);
+      stan_table_sort (k->comment);
     }
-  for (i = 0; i< s->count; i++)
+  else
     {
-      if (s->ins[i].address == addr)
-	{
-	  if (s->imeta[i].comment) free (s->imeta[i].comment);
-	  s->imeta[i].comment = strdup (comment);
-	  return 0;
-	}
+      // It if exists overwrite
+      if (c->comment) free (c->comment);
+      c->comment = strdup (comment);
     }
-  fprintf (stderr, "- Address %p not found or does not match an instruction\n",
-	   (void*)addr);
-  return -1;
+
+  return 0;
       
 }
 
 int           
 stan_core_del_comment (STAN_CORE *k, long addr)
 {
-  STAN_SEGMENT *s;
-  int          i;
+  //  STAN_SEGMENT *s;
+  STAN_COMMENT *c;
+  //int          i;
 
   if (!k) return -1;
   if (!addr) return -1;
 
-  if ((s = stan_core_find_func_section (k, addr)) == NULL)
+  if ((c = (STAN_COMMENT*) stan_table_find (k->comment, addr)) == NULL)
     {
-      fprintf (stderr, "- Cannot find code for address %p\n", (void*)addr);
-      return -1;
+      if (c->comment) free (c->comment);
+      c->comment = NULL;
+      // TODO: Add function to compact table and effectively remove the entry
     }
-  for (i = 0; i< s->count; i++)
+  else
     {
-      if (s->ins[i].address == addr)
-	{
-	  if (s->imeta[i].comment) free (s->imeta[i].comment);
-	  s->imeta[i].comment = NULL;
-	  return 0;
-	}
+      fprintf (stderr, "- No comment at address %p\n", (void*)addr);
     }
-  fprintf (stderr, "- Address %p not found or does not match an instruction\n",
-	   (void*)addr);
-  return -1;
-      
+
+  return 0;
 }

@@ -81,6 +81,15 @@
  *  op[1] -> 
  */
 
+// This is also a STAN_ITEM object stored in tables
+typedef struct stan_comment_t
+{
+  long addr;
+  char *id;
+  char *comment;
+} STAN_COMMENT;
+
+
 typedef struct stan_imeta_t
 {
   int         type;
@@ -106,9 +115,11 @@ typedef struct stan_segment_t
   long        esize;
   long        a0;
   long        a1;
+  /*
   cs_insn     *ins;
   STAN_IMETA  *imeta; // Stores instruction metadata... array of size count
   size_t      count;
+  */
   void        *p; 
 } STAN_SEGMENT;
 
@@ -126,12 +137,19 @@ typedef struct stan_core_t
   long       ep;   // Entry Point
   int        l_cnt;
   csh        handle;
+  // This information is temporal
+  // we just store it here instead of keeping it per segment
+  cs_insn    *ins;
+  STAN_IMETA *imeta; // Stores instruction metadata... array of size count
+  size_t     count;
+  // ------------------------------------------
   STAN_TABLE *seg;
   STAN_TABLE *sec;
   STAN_TABLE *sym;
   STAN_TABLE *dsym;
   STAN_TABLE *func;
   STAN_TABLE *label;
+  STAN_TABLE *comment;
   // API -> core type dependant
   int   (*core_init) (struct stan_core_t *k);
   int   (*core_process) (struct stan_core_t *k);
@@ -185,9 +203,10 @@ extern "C" {
   int           stan_core_def_func (STAN_CORE *k, char *name, long addr);
   int           stan_core_def_sym (STAN_CORE *k, char *name, long addr);
   STAN_SEGMENT* stan_core_find_func_section (STAN_CORE *k, long addr);
+
   int           stan_core_add_comment (STAN_CORE *k, long addr, char *comment);
   int           stan_core_del_comment (STAN_CORE *k, long addr);
-
+  int           stan_comment_free (STAN_COMMENT *c);
   // Util FUnctions
   int           stan_core_ptr_segment (STAN_CORE *k, long addr);
 #ifdef __cplusplus

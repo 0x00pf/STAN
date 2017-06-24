@@ -36,46 +36,34 @@
 //      The ana module will remain but it has to do more stuff
 //      and we will not store the code, but we will disassemble
 //      every time the user asks for it
-static int
+static long
 _stan_configure_arm (STAN_CORE *k, long addr)
 {
   if (!k) return -1;
   if (!addr) return -1;
   
-  if (k->arch != STAN_CORE_ARCH_ARM) return -1;
+  if (k->arch != STAN_CORE_ARCH_ARM) return addr;
   if (addr & 1)
-    cs_option(k->handle, CS_OPT_MODE, CS_MODE_THUMB);
+    {
+      cs_option(k->handle, CS_OPT_MODE, CS_MODE_THUMB);
+      return (addr -1);
+    }
   else
     cs_option(k->handle, CS_OPT_MODE, CS_MODE_ARM);
-  return 0;
+  return addr;
 }
 
-static int
-stan_ana_section (csh handle, STAN_CORE *k, STAN_SEGMENT *s)
+int
+stan_ana_process_current_code (STAN_CORE *k)
 {
   STAN_IMETA    *imeta;
   int           i;
 
-  if (!k) return -1;
-  if (!s) return -1;
-  if (k->valid != STAN_CORE_VALID) return -1;
 
-
-  if (!(s->type & STAN_SEGMENT_CODE)) return 1;
-
-  cs_option(handle, CS_OPT_DETAIL, CS_OPT_ON);
-  cs_option(handle, CS_OPT_SKIPDATA, CS_OPT_ON);     
-  cs_option(handle, CS_OPT_DETAIL, CS_OPT_ON);
-
-  _stan_configure_arm (k, s->addr);
-
-  s->count = cs_disasm(handle, k->code + s->off, 
-		       s->size, s->addr, 0, &s->ins);
-  printf ("  * Analysing %ld instructions\n", s->count);
   // Create Metadata array
-  imeta = stan_imeta_new (k, s);
+  imeta = stan_imeta_new (k, NULL);
 
-  if (s->count > 0)
+  if (k->count > 0)
     {
       /* Add functions and labels */
       size_t j;
@@ -84,11 +72,11 @@ stan_ana_section (csh handle, STAN_CORE *k, STAN_SEGMENT *s)
 
       /* Preliminary opcode analysis */
 
-      for (j = 0; j < s->count; j++) 
+      for (j = 0; j < k->count; j++) 
 	{
-	  cs_detail *detail = s->ins[j].detail;
+	  cs_detail *detail = k->ins[j].detail;
 
-	  ins = &s->ins[j];
+	  ins = &k->ins[j];
 	  // XXX: this has to be platform independant
 	  if (!strncasecmp (ins->mnemonic, "push", 4)) 
 	    imeta[j].type = STAN_IMETA_PUSH;
@@ -106,8 +94,8 @@ stan_ana_section (csh handle, STAN_CORE *k, STAN_SEGMENT *s)
 
 	  // Check if address is a symbol
 	  STAN_SYM *sym;
-	  if ((sym = (STAN_SYM*) stan_table_find (k->sym, s->ins[j].address)) != NULL)
-	    s->imeta[j].addr = sym;
+	  if ((sym = (STAN_SYM*) stan_table_find (k->sym, k->ins[j].address)) != NULL)
+	    imeta[j].addr = sym;
 	  
 	  if (detail)
 	    {
@@ -116,20 +104,32 @@ stan_ana_section (csh handle, STAN_CORE *k, STAN_SEGMENT *s)
 		{
 		  if (detail->groups[i] == CS_GRP_RET) 
 		    {
-		      s->imeta[j].type = STAN_IMETA_RET;
+		      imeta[j].type = STAN_IMETA_RET;
 		    }
 		  if (detail->groups[i] == CS_GRP_INT) 
 		    {
-		      s->imeta[j].type = STAN_IMETA_SYSCALL;
+		      imeta[j].type = STAN_IMETA_SYSCALL;
 		    }
 		  
 		  if (detail->groups[i] == CS_GRP_CALL) 
 		    {
-		      if (detail->x86.operands[0].type == X86_OP_IMM)
-			sym = stan_core_add_func (k, detail->x86.operands[0].imm);
-		      s->imeta[j].type = STAN_IMETA_CALL;
-		      if (sym) s->imeta[j].tfunc = sym;
+		      if (k->arch == STAN_CORE_ARCH_X86)
+			{
+			  
+			  if (detail->x86.operands[0].type == X86_OP_IMM)
+			    sym = stan_core_add_func (k, detail->x86.operands[0].imm);
+			  imeta[j].type = STAN_IMETA_CALL;
+			  if (sym) imeta[j].tfunc = sym;
+			}
+		      else if (k->arch == STAN_CORE_ARCH_ARM)
+			{
+			  if (detail->arm.operands[0].type == ARM_OP_IMM)
+			    sym = stan_core_add_func (k, detail->arm.operands[0].imm);
+			  imeta[j].type = STAN_IMETA_JMP;
+			  if (sym) imeta[j].tfunc = sym;
+			}
 		    }
+		
 		  if (detail->groups[i] == CS_GRP_JUMP)
 		    {
 		      if (k->arch == STAN_CORE_ARCH_X86)
@@ -137,17 +137,20 @@ stan_ana_section (csh handle, STAN_CORE *k, STAN_SEGMENT *s)
 			  
 			  //if (detail->x86.operands[0].type == CS_OP_IMM)
 			  if (detail->x86.operands[0].type == X86_OP_IMM)
-			    sym = stan_core_add_label (k, detail->x86.operands[0].imm);
-			  s->imeta[j].type = STAN_IMETA_JMP;
-			  if (sym) s->imeta[j].tlabel = sym;
+			    {
+			      sym = stan_core_add_label (k, detail->x86.operands[0].imm);
+			      if (sym) imeta[j].tlabel = sym;
+			    }
+			  imeta[j].type = STAN_IMETA_JMP;
+
 			  
 			}
 		      else if (k->arch == STAN_CORE_ARCH_ARM)
 			{
 			  if (detail->arm.operands[0].type == ARM_OP_IMM)
 			    sym = stan_core_add_label (k, detail->arm.operands[0].imm);
-			  s->imeta[j].type = STAN_IMETA_JMP;
-			  if (sym) s->imeta[j].tlabel = sym;
+			  imeta[j].type = STAN_IMETA_JMP;
+			  if (sym) imeta[j].tlabel = sym;
 			  
 			}
 		      
@@ -160,23 +163,97 @@ stan_ana_section (csh handle, STAN_CORE *k, STAN_SEGMENT *s)
     }
   else
     {
-      printf ("Error disassembling section <%s>\n", s->id);
-      s->count = 0;
+      printf ("Error disassembling\n");
+      k->count = 0;
     }
-  
+
+  stan_table_sort (k->func);
+  stan_table_sort (k->label);
+
   return 0;
 }
 
-int  
-stan_ana_init (STAN_CORE *k)
+long
+stan_ana_process_section ( STAN_CORE *k, STAN_SEGMENT *s)
+{
+  csh           handle;
+  long          addr;
+
+  if (!k) return -1;
+  if (!s) return -1;
+  if (k->valid != STAN_CORE_VALID) return -1;
+  if ((handle = k->handle) == 0)
+    {
+      fprintf (stderr, "- Disassembler not initialised...\n");
+      return -1;
+    }
+
+  if (!(s->type & STAN_SEGMENT_CODE)) return 1;
+
+  cs_option(handle, CS_OPT_DETAIL, CS_OPT_ON);
+  cs_option(handle, CS_OPT_SKIPDATA, CS_OPT_ON);     
+  cs_option(handle, CS_OPT_DETAIL, CS_OPT_ON);
+
+  addr = _stan_configure_arm (k, s->addr);
+
+  k->count = cs_disasm(handle, k->code + s->off, 
+		       s->size, s->addr, 0, &k->ins);
+  printf ("  * Analysing %ld instructions\n", k->count);
+  // here we have got the code... now we can analyse it
+  // whatever it is
+  stan_ana_process_current_code (k);
+
+
+  return addr;
+}
+
+
+long
+stan_ana_process_addr (STAN_CORE *k, long addr)
+{
+  STAN_SEGMENT *s;
+  int           i;
+  csh           handle;
+  long          rel, addr1;
+
+  if (!k) return -1;
+  if (k->valid != STAN_CORE_VALID) return -1;
+
+  handle = k->handle;
+  // FInd segment
+  if ((i = stan_core_ptr_segment (k, addr)) < 0)
+    {
+      fprintf (stderr, "- invalid address");
+      return -1;
+    }
+  s = (STAN_SEGMENT*) k->seg->p[i];
+  if (!(s->type & STAN_SEGMENT_CODE)) return 1;
+
+  cs_option(handle, CS_OPT_DETAIL, CS_OPT_ON);
+  cs_option(handle, CS_OPT_SKIPDATA, CS_OPT_ON);     
+  cs_option(handle, CS_OPT_DETAIL, CS_OPT_ON);
+
+  addr1 = _stan_configure_arm (k, addr);
+  rel = addr - s->addr;
+  k->count = cs_disasm(handle, k->code + s->off + rel, 
+		       s->size, addr1, 0, &k->ins);
+  printf ("  * Analysing %ld instructions at (%p)\n", k->count, (void*)addr1);
+  // here we have got the code... now we can analyse it
+  // whatever it is
+  stan_ana_process_current_code (k);
+
+  return addr1;
+}
+
+
+int
+stan_ana_init_dis (STAN_CORE *k)
 {
   csh handle;
-  int i;
   char  *val;
   int   syntax = CS_OPT_SYNTAX_INTEL;
   int   arch, mode;
 
-  printf ("Starting analysis\n");
   if (!k) return -1;
   if (k && k->valid == STAN_CORE_INVALID)
     {
@@ -203,6 +280,40 @@ stan_ana_init (STAN_CORE *k)
   k->handle = handle;
   cs_option(handle, CS_OPT_SYNTAX, syntax);
 
+  return 0;
+}
+
+int
+stan_ana_close_dis (STAN_CORE *k)
+{
+  if (!k) return -1;
+  if (k->ins)
+    {
+      cs_free (k->ins, k->count);
+      k->ins = NULL;
+      k->count = 0;
+    }
+  if (k->imeta)
+    {
+      free(k->imeta);
+      k->imeta = NULL;
+    }
+  if (k->handle)
+    cs_close (&k->handle);
+  
+  k->handle = 0;
+
+  return 0 ;
+}
+
+int  
+stan_ana_init (STAN_CORE *k)
+{
+  int   i;
+
+  printf ("Starting analysis\n");
+
+  stan_ana_init_dis (k);
   // Check if there are sections... otherwise use segment
   STAN_SEGMENT *c;
   if (k->sec->n == 0)
@@ -220,11 +331,12 @@ stan_ana_init (STAN_CORE *k)
     {
       c = (STAN_SEGMENT*) k->sec->p[i];
       printf ("+ Processing section [%d] '%s'\n", i, c->id);
-      stan_ana_section (handle, k, c);
+      stan_ana_process_section (k, c);
     }
 
   stan_table_sort (k->func);
   stan_table_sort (k->label);
+  stan_ana_close_dis (k);
   // Done
   return 0;
 }

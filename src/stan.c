@@ -44,6 +44,7 @@ static char *cmd[] = {
   "cfg.set",
   "dis.section",
   "dis.function",
+  "dis.addr",
   "func.rename",
   "label.rename",
   "comment.add",
@@ -78,15 +79,7 @@ run_cmd (STAN_CASE *c, char *buffer1)
       stan_case_free (c);
       c = stan_case_load (c, buffer + strlen ("case.load "));
     }
-  else if (!strncasecmp (buffer, "case.save", strlen ("case.save")))
-    {
-      stan_case_save (c, buffer + strlen ("case.save "));
-    }
 
-  else if (!strncasecmp (buffer, "quit", strlen ("quit")))
-    {
-      return 1;
-    }
   else if (!strncasecmp (buffer, "help.abi", strlen ("help.abi")))
     {
       printf ("  Current Core is: %s %s %s\n",
@@ -162,6 +155,13 @@ run_cmd (STAN_CASE *c, char *buffer1)
   else if (!strncasecmp (buffer, "dis.function", strlen ("dis.function")))
     {
       stan_dis_func (c->k, buffer + strlen ("dis.function "));
+    }
+  else if (!strncasecmp (buffer, "dis.addr", strlen ("dis.addr")))
+    {
+      long addr;
+      int  count;
+      sscanf (buffer + strlen ("dis.addr "), "%p %d", &addr, &count);
+      stan_dis_addr (c->k, addr, count);
     }
 
   else if (!strncasecmp (buffer, "cfg.dump", strlen ("cfg.dump")))
@@ -292,6 +292,18 @@ run_cmd (STAN_CASE *c, char *buffer1)
 	  return 0;
 	}
       stan_dis_poke_block (c->k, fmt, addr, str);
+    }
+  else if (!strncasecmp (buffer, "case.save", strlen ("case.save")) || 
+	   !strncasecmp (buffer, ":w", strlen (":w"))
+	   )
+    {
+      stan_case_save (c, buffer + strlen ("case.save "));
+    }
+
+  else if (!strncasecmp (buffer, "quit", strlen ("quit")) || 
+	   (buffer[0] == 'q' && buffer[1] == 0))
+    {
+      return 1;
     }
 
 

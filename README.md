@@ -36,12 +36,14 @@ This is the list of current available commands
 * core.load `file`. Loads the binary specified by `file`
 * dis.section `section_name`. Disassembles a whole section
 * dis.function `function_name`. Disassembles a function. You can define functions using `func.def` in case the analysis failed.
+* dis.addr `memory_addr` `count`. Disassembles `count` instructions starting at address `memory_addr`
 * func.rename `old_function_name` `new_function_name`. Renames a function
 * func.def `func_name` `address`. Tells STAN that there is a function at `address`
 * label.rename `old_label_name` `new_label_name`. Renames a lable
 * comment.add `address` `Comment`. Adds a comment at a given address. Address has to be hexadecimal without `0x` at the beginning
 * comment.del `address`. Deletes a comment associated to a given address
 * mem.dump `fmt` `address` `count`. Dumps `count` items from memory at `address`. Valid formats are `x` for hex bytes and `p` for pointers... more to come
+* mem.poke `fmt` `address` `val`. Write `val` at address `address`. Format can be `p` for pointers or `x` for hex strings (ej `mem.poke x 4001b3 9090`)
 * sym.def `sym_name` `address`. Defines a generic symbol at `address`
 * help.abi. Shows the function calling convention for the binary being analysed
 * quit. Do not leave STAN alone!!!!

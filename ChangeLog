@@ -1,3 +1,13 @@
 
+Sat Jun 24 16:28:11 CEST 2017
+	* Updated code to disassemble on the fly
+	* ARM Thumb code still does not work :(
+
+Thu Jun 22 18:36:39 CEST 2017
+	* Added MEM.POKE function
+	* Fixed MEM.DUMP for hex bytes
+	* Print single characters for immediate addressing (specially cmp)
+
+
 Mon Jun 18 19:01:59 CEST 2017
 	* Refactored initial PoC

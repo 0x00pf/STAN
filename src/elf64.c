@@ -345,6 +345,7 @@ stan_elf64_init (STAN_CORE *k)
 
   // Add Entry point symbol
   STAN_SYM *ep = stan_sym_new ("__entry_point", elf_hdr->e_entry);
+  ep->type= STAN_SYM_TYPE_FUNC;
   stan_table_add (k->sym, (STAN_ITEM*)ep);
   stan_table_sort (k->sym);
 

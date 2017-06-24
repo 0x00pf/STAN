@@ -104,12 +104,16 @@ stan_elf32_process_symtab (STAN_CORE *k, Elf32_Shdr* s)
       else
 	sname = "NONAME";
 
-      //printf ("** ELF_Symtab Adding Symbol to table (%s,%p)\n", sname, symbol->st_value);
+      printf ("** ELF_Symtab Adding Symbol to table (%s,%p)\n", sname, symbol->st_value);
       ssym = stan_sym_new (sname, symbol->st_value);
       stan_table_add (k->sym, (STAN_ITEM*)ssym);
 
-      if (ELF32_ST_TYPE(symbol->st_info) == STT_FUNC) 
-	stan_sym_add_type (ssym, STAN_SYM_TYPE_FUNC); 
+      if (ELF32_ST_TYPE(symbol->st_info) == STT_FUNC)
+	{
+	  ssym->type = STAN_SYM_TYPE_FUNC;
+	  //stan_sym_add_type (ssym, STAN_SYM_TYPE_FUNC); 
+	  //printf ("IS FUNCTION\n");
+	}
       //printf ("*************************\n");
     }
 }
@@ -355,6 +359,7 @@ stan_elf32_init (STAN_CORE *k)
 
   // Add Entry point symbol
   STAN_SYM *ep = stan_sym_new ("__entry_point", elf_hdr->e_entry);
+  ep->type= STAN_SYM_TYPE_FUNC;
   stan_table_add (k->sym, (STAN_ITEM*) ep);
   stan_table_sort (k->sym);
 

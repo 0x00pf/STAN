@@ -171,7 +171,7 @@ stan_table_find_by_name (STAN_TABLE* t, char *name)
   for (i = 0; i < t->n; i++)
     {
       //printf ("looking for '%s'... %s(%d)\n", name, t->p[i]->name, t->n);
-      if (!strncmp (t->p[i]->name, name, strlen(name))) return t->p[i];
+      if (!strcmp (t->p[i]->name, name)) return t->p[i];
     }
   
   return NULL;

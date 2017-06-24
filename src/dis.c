@@ -28,6 +28,7 @@
 #include <capstone/capstone.h>
 
 #include "core.h"
+#include "ana.h"
 #include "dis.h" 
 /* Mnemonic color table */
 char *mnemonic_color[] = {
@@ -58,7 +59,7 @@ _stan_dis_op (STAN_CORE *k, STAN_SEGMENT *s, int i)
   int        n_ops = 0;
   char       *aux;
 
-  ins = &s->ins[i];
+  ins = &k->ins[i];
   //im = &(s->imeta[i]);
 
   eip = ins->address; // Current IP
@@ -110,11 +111,13 @@ _stan_dis_op (STAN_CORE *k, STAN_SEGMENT *s, int i)
 	  if (detail->arm.operands[j].mem.base == ARM_REG_PC)
 	    {
 	      size_t indx = i + detail->arm.operands[j].mem.disp / 4 + 2;
+	      // FIXME: We should get thes from k->code
+	      //        Could it be that it is not decoded by casptone?? CHECK IT
 	      int ptr = 
-		s->ins[indx].bytes[3] << 24 |
-		s->ins[indx].bytes[2] << 16 |
-		s->ins[indx].bytes[1] << 8 |
-		s->ins[indx].bytes[0];
+		k->ins[indx].bytes[3] << 24 |
+		k->ins[indx].bytes[2] << 16 |
+		k->ins[indx].bytes[1] << 8 |
+		k->ins[indx].bytes[0];
 	      aux = stan_dis_check_ptr (k, ptr);
 	      if (aux) 
 		{
@@ -181,11 +184,12 @@ _stan_dis_inst (STAN_CORE *k, STAN_SEGMENT *s, int i)
   int  j;
   cs_insn *ins;
   STAN_IMETA *im;
+  STAN_COMMENT *com;
   STAN_SYM   *l;
 
   //ins = s->ins;
-  ins = &s->ins[i];
-  im = &(s->imeta[i]);
+  ins = &k->ins[i];
+  im = &(k->imeta[i]);
   /* Processing single instruction */
   /* Check address */
   if (im->addr || im->func)  printf ("\n");
@@ -233,8 +237,8 @@ _stan_dis_inst (STAN_CORE *k, STAN_SEGMENT *s, int i)
   _stan_dis_op (k, s, i);
 
   printf (" \n");
-  if (im->comment)
-    stan_printf (FG_LWHITE, "%41s %s\n" RESET, ";", im->comment);
+  if ((com = (STAN_COMMENT*) stan_table_find (k->comment, ins->address)) != NULL)
+    stan_printf (FG_LWHITE, "%41s %s\n" RESET, ";", com->comment);
 
   return 0;
 }
@@ -277,16 +281,28 @@ stan_dis_func (STAN_CORE *k, char *sname)
       fprintf (stderr, "- Cannot find function '%s' section. Dynamic symbol?\n", sname);
       return -1;
     }
-  printf ("+ Function '%s'@%p found at section '%s'(%ld,%ld)\n", 
-	  sname, (void*)f->addr, s->id, s->size, s->count);
+  printf ("+ Function '%s'@%p found at section '%s'(%ld bytes)\n", 
+	  sname, (void*)f->addr, s->id, s->size);
   if (!(s->type & STAN_SEGMENT_CODE)) 
     {
       fprintf (stderr, "- Section '%s' is not executable\n", sname);
       return -1;
     }
-
-  count = s->count;
-  insn = s->ins;
+  // Analyse and Disassemble function...
+  stan_ana_init_dis (k);
+  // Disassemble and produce metadata
+  // XXX: We are calculating the segment to get the address and we do it
+  //      again inside the ANA module... 
+  // TODO: Write a proper function to avoid double work
+  printf ("+ Disassembling function %s@%p\n", sname, (void*) f->addr);
+  long addr1;
+  addr1 = stan_ana_process_addr (k, f->addr);
+  if (addr1 != f->addr) f->addr = addr1;
+  // ----
+  // Now the core contains the disassembly and metadata for the
+  // indicated address (the function)
+  count = k->count;
+  insn = k->ins;
   if (count <= 1)
     {
       fprintf (stderr, "- Section does not contain code\n");
@@ -303,120 +319,39 @@ stan_dis_func (STAN_CORE *k, char *sname)
   for (j = 0; j < count; j++)
     {
 
-      if (s->ins[j].address < f->addr) continue;
+      if (k->ins[j].address < f->addr) continue;
       _stan_dis_inst (k, s, j);
 
-      if (cnt + 1 > s->count) 
+      if (cnt + 1 > k->count) 
 	{
-	  printf ("[%d] %d,%ld\n", j, cnt + 1, s->count);
+	  printf ("[%d] %d,%ld\n", j, cnt + 1, k->count);
 	  break;
 	}
       //if (s->imeta[j].type == STAN_IMETA_RET) break;
-#if 1
-      if ((_s1 = (STAN_SYM*)stan_table_find (k->sym, s->ins[j + 1].address)) != NULL) 
+
+      if ((_s1 = (STAN_SYM*)stan_table_find (k->sym, k->ins[j + 1].address)) != NULL) 
 	{
-	  printf ("+ Stopped after founding symbol '%s' (%d instructions)\n", _s1->id, cnt);
-	  break;
+	  if ((_s1->type == STAN_SYM_TYPE_FUNC) |
+	      (_s1->type == STAN_SYM_TYPE_SECTION))
+	    {
+	      printf ("+ Stopped after founding symbol '%s' (%d instructions)\n", _s1->id, cnt);
+	      break;
+	    }
 	}
-#endif
+      if ((_s1 = (STAN_SYM*)stan_table_find (k->func, k->ins[j + 1].address)) != NULL) 
+	{
+	      printf ("+ Stopped after founding symbol '%s' (%d instructions)\n", _s1->id, cnt);
+	      break;
+
+	}
+
       cnt++;
     }
 
+  stan_ana_close_dis (k);
   return 0;
 }
 
-#if 0
-// XXX: THis function is not finished!!!!!
-int
-stan_dis_sym (STAN_CORE *k, char *sname)
-{
-  STAN_SEGMENT *s;
-  cs_insn      *insn;
-  size_t       count;
-  int          j, sindx, sindx1;
-  STAN_SYM     *f;
-  long         saddr, taddr;
-
-  if (!k) return -1;
-  if (!sname) return -1;
-
-  /* Find function by name*/
-  if ((sindx = stan_table_get_index_by_name (k->sym, sname)) < 0)
-    {
-      if ((sindx = stan_table_get_index_by_name (k->func, sname)) < 0)
-	{
-	  fprintf (stderr, "- Cannot find function '%s'\n", sname);
-	  return -1;
-	}
-      saddr = k->func->p[sindx];
-      if (sindx == k->func->n)
-	taddr = 0;
-      else
-	taddr = k->func->p[sindx + 1]->addr;
-    }
-  else
-    {
-      saddr = k->symb->p[sindx];
-      if (sindx == k->sym->n)
-	taddr = 0;
-      else
-	taddr = k->sym->p[sindx + 1]->addr;
-    }
-
-  if ((s = stan_core_find_func_section (k, f->addr)) == NULL)
-    {
-      fprintf (stderr, "- Cannot find function '%s' section. Dynamic symbol?\n", sname);
-      return -1;
-    }
-  printf ("+ Function '%s'@%p found at section '%s'(%ld,%ld)\n", 
-	  sname, (void*)f->addr, s->id, s->size, s->count);
-  if (!(s->type & STAN_SEGMENT_CODE)) 
-    {
-      fprintf (stderr, "- Section '%s' is not executable\n", sname);
-      return -1;
-    }
-
-  count = s->count;
-  insn = s->ins;
-  if (count <= 1)
-    {
-      fprintf (stderr, "- Section does not contain code\n");
-      return -1;
-    }
-  if (insn == NULL)
-    {
-      fprintf (stderr, "- Section does not contain code\n");
-      return -1;
-    }
-
-  int cnt = 0;
-
-  for (j = 0; j < count; j++)
-    {
-      if (s->ins[j].address < saddr) break;
-      if (s->ins[j].address >= taddr) break;
-      _stan_dis_inst (k, s, j);
-
-      if (cnt + 1 > s->count) 
-	{
-	  printf ("[%d] %d,%ld\n", j, cnt + 1, s->count);
-	  break;
-	}
-      if (s->imeta[j].type == STAN_IMETA_RET) break;
-#if 0
-      if ((_s1 = stan_table_find (k->symb, s->ins[j + 1].address)) != NULL) 
-	{
-	  printf ("+ Stopped after founding symbol '%s' (%d instructions)\n", _s1->id, cnt);
-	  break;
-	}
-#endif
-      cnt++;
-    }
-
-  return 0;
-}
-
-#endif
 
 
 
@@ -449,9 +384,10 @@ stan_dis_section (STAN_CORE *k, char *sname)
       fprintf (stderr, "- Section '%s' is not executable\n", sname);
       return -1;
     }
-
-  count = s->count;
-  insn = s->ins;
+  stan_ana_init_dis (k);
+  stan_ana_process_section (k, s);
+  count = k->count;
+  insn = k->ins;
   if (count <= 0)
     {
       fprintf (stderr, "- Section does not contain code\n");
@@ -474,12 +410,76 @@ stan_dis_section (STAN_CORE *k, char *sname)
 
  
 int
-stan_dis_addr (STAN_CORE *k, long addr, int count)
+stan_dis_addr (STAN_CORE *k, long addr, size_t count)
 {
-  if (!k) return 0;
+  STAN_SEGMENT *s;
+  cs_insn      *insn;
+  size_t       count1;
+  int          j;
 
+
+  if (!k) return -1;
+
+  /* Find function by name*/
+  if ((s = stan_core_find_func_section (k, addr)) == NULL)
+    {
+      fprintf (stderr, "- Cannot find function address. \n");
+      return -1;
+    }
+  printf ("+ Address %p found at section '%s'(%ld bytes)\n", 
+	  (void*)addr, s->id, s->size);
+  if (!(s->type & STAN_SEGMENT_CODE)) 
+    {
+      fprintf (stderr, "- Section '%s' is not executable\n", s->id);
+      return -1;
+    }
+  // Analyse and Disassemble function...
+  stan_ana_init_dis (k);
+  // Disassemble and produce metadata
+  // XXX: We are calculating the segment to get the address and we do it
+  //      again inside the ANA module... 
+  // TODO: Write a proper function to avoid double work
+  printf ("+ Disassembling function @%p\n", (void*) addr);
+  stan_ana_process_addr (k, addr);
+  // ----
+  // Now the core contains the disassembly and metadata for the
+  // indicated address (the function)
+  count1 = k->count;
+
+  if (count1 < 0) count1 = k->count;
+  else
+    {
+      if (count > k->count) count1 = k->count;
+      else count1 = count;
+    }
+  
+
+
+  insn = k->ins;
+  if (count <= 1)
+    {
+      fprintf (stderr, "- Section does not contain code\n");
+      return -1;
+    }
+  if (insn == NULL)
+    {
+      fprintf (stderr, "- Section does not contain code\n");
+      return -1;
+    }
+
+  int cnt = 0;
+  printf ("+ Dumping %ld instructions\n", count1);
+  for (j = 0; j < count1; j++)
+    {
+      _stan_dis_inst (k, s, j);
+
+      cnt++;
+    }
+
+  stan_ana_close_dis (k);
   return 0;
 }
+
  
 
 char *
@@ -611,6 +611,7 @@ stan_dis_check_ptr (STAN_CORE *k, long ptr)
 }
 
 #define DUMP_SIZE 16
+#define DUMP_WSIZE 8
 
 static int
 _dump_bytes (long addr, long len)
@@ -650,8 +651,9 @@ _dump_addresses (long addr, long len)
 
   for (i = 0; i < len; i++)
     {
+      // Resolve symbols!!
       printf ("%p ", (void*) p[i]);
-      if ((i & (i % DUMP_SIZE)) == 0) printf ("\n");
+      if (((i > 0) & ((i % DUMP_WSIZE) == 0))) printf ("\n");
     }
   printf ("\n");
   return 0;
@@ -694,9 +696,9 @@ _poke_bytes (long addr, char *str)
   v= 0;
   for (i = 0; i < l; i++)
     {
-      sscanf (p, "%02x", &v);
-      printf ("Wrote %02x to %p\n", v, (void*)((unsigned char*)addr + l));
-      *(unsigned char*)((unsigned char*)addr + l) = (unsigned char) v;
+      sscanf (p, "%02x", (unsigned int *) &v);
+      printf ("Wrote %02x to %p\n", (unsigned char)v, (void*)((unsigned char*)addr + i));
+      *(unsigned char*)((unsigned char*)addr + i) = (unsigned char) v;
 
       p+=2;
     }

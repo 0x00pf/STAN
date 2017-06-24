@@ -117,10 +117,10 @@ int
 stan_case_save (STAN_CASE *c, char *fname)
 {
   FILE  *f;
-  int   i, j, n;
-  STAN_IMETA *im;
+  int   i, n;
   STAN_SYM *s;
-  STAN_SEGMENT *sec;
+  STAN_COMMENT *com;
+
   char *fname1;
 
   if (!c) return -1;
@@ -133,7 +133,7 @@ stan_case_save (STAN_CASE *c, char *fname)
       fprintf (stderr, "- Cannot save to file '%s'\n", fname1);
       return -1;
     }
-  //fprintf (f, "CASE: %s\n", c->id);
+
   // Dump Renamed Symbols
   n = c->k->sym->n;
   for (i = 0; i < n; i++)
@@ -158,21 +158,15 @@ stan_case_save (STAN_CASE *c, char *fname)
       if (s->dump)
 	fprintf (f, "F:%s:%p\n", s->id, (void*)s->addr);
     }
-  n = c->k->sec->n;
-  cs_insn *ins;
+  // Dump Comments
+  n = c->k->comment->n;
   for (i = 0; i < n; i++)
     {
-      sec = (STAN_SEGMENT*) c->k->sec->p[i];
-      for (j = 0; j < sec->count; j++ )
-	{
-	  im = &sec->imeta[j];
-	  ins = &sec->ins[j];
-	  //printf ("--> %d im:%p addr:%p\n", j, im, im->addr);
-	  if (im->comment)
-	    fprintf (f, "C:%d:%p:%s\n", i, (void*)ins->address, im->comment);
-	}
+      com = (STAN_COMMENT*)c->k->comment->p[i];
+      fprintf (f, "C:%p:%s\n", (void*)com->addr, com->comment);
     }
   fclose (f);
+  printf ("+ Case successfully save '%s'\n", fname1);
   return 0;
 }
 
@@ -248,11 +242,12 @@ stan_case_load (STAN_CASE *c, char *fname)
  
 	case 'C':
 	  {
-	    char *s, *comment, *saddr;
+	    char *comment, *saddr;
 	    long addr;
-	    s = strtok (buffer + 2, ":");
-	    saddr = strtok (NULL, ":");
+
+	    saddr = strtok (buffer + 2, ":");
 	    comment = strtok (NULL, ":");
+
 	    addr = strtol (saddr + 2, NULL, 16);
 	    printf ("-> COMMENT: '%s' '%p'\n", comment, (void*) addr);
 	    stan_core_add_comment (c->k, addr, comment);

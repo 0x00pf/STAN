@@ -31,8 +31,8 @@ extern "C" {
 
   int    stan_dis (STAN_CORE *k);
   int    stan_dis_section (STAN_CORE *k, char *sname);
-  int    stan_dis_addr (STAN_CORE *k, long addr, int count);
   int    stan_dis_func (STAN_CORE *k, char *fname);
+  int    stan_dis_addr (STAN_CORE *k, long addr, size_t count);
 
   char*  stan_dis_check_ptr (STAN_CORE *k, long addr);
   char*  stan_dis_dump_mem (STAN_CORE *k, long addr);
