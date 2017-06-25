@@ -81,7 +81,6 @@ stan_elf64_process_symtab (STAN_CORE *k, Elf64_Shdr* s)
   void *data = k->code;
   Elf64_Ehdr* elf_hdr = (Elf64_Ehdr *) data;
   Elf64_Shdr *shdr = (Elf64_Shdr *)(data + elf_hdr->e_shoff);
-  //Elf64_Shdr *sh_strtab = &shdr[elf_hdr->e_shstrndx];
   const char *const sh_strtab_p = (char *)(data + shdr[s->sh_link].sh_offset);
   const char *const sh_symtab_p = data + s->sh_offset;
   Elf64_Sym *symbol;
@@ -94,6 +93,7 @@ stan_elf64_process_symtab (STAN_CORE *k, Elf64_Shdr* s)
 #ifdef DEBUG
   printf ("  + %d symbols in symtab\n", n_entries);
 #endif
+
   for (i = 0; i < n_entries; i++)
     {
       symbol = &((Elf64_Sym *)sh_symtab_p)[i];
@@ -118,12 +118,10 @@ void
 stan_elf64_process_dynsymtab (STAN_CORE *k, Elf64_Shdr* s)
 {
   void *data = k->code;
-  //char *sname;
   int n_entries;
   int  i;
   Elf64_Ehdr* elf_hdr = (Elf64_Ehdr *) data;
   Elf64_Shdr *shdr = (Elf64_Shdr *)(data + elf_hdr->e_shoff);
-  //Elf64_Shdr *sh_strtab = &shdr[elf_hdr->e_shstrndx];
   const char *const sh_strtab_p = (char *)(data + shdr[s->sh_link].sh_offset);
   const char *const sh_symtab_p = data + s->sh_offset;
   Elf64_Sym *symbol;
@@ -142,10 +140,8 @@ stan_elf64_process_dynsymtab (STAN_CORE *k, Elf64_Shdr* s)
       else
 	strcpy (buffer, "NONAME");
 
-      //printf ("** ELF_DynSymTab (DSYM) Adding Symbol to table (%s,%p)\n", sname, symbol->st_value);
       ssym = stan_sym_new (buffer, symbol->st_value);
       stan_table_add_dups (k->dsym, (STAN_ITEM*)ssym);
-      //printf ("*************************\n");
     }
 
 }
@@ -155,18 +151,12 @@ stan_elf64_process_dynsymtab (STAN_CORE *k, Elf64_Shdr* s)
 void
 stan_elf64_process_rela (STAN_CORE *k, Elf64_Shdr* s)
 {
-  void *data = k->code;
-  //char *sname;
-  int n_entries;
-  int  i, indx;
-  //Elf64_Ehdr* elf_hdr = (Elf64_Ehdr *) data;
-  //Elf64_Shdr *shdr = (Elf64_Shdr *)(data + elf_hdr->e_shoff);
-  //Elf64_Shdr *sh_strtab = &shdr[elf_hdr->e_shstrndx];
-  //const char *const sh_strtab_p = (char *)(data + shdr[s->sh_link].sh_offset);
+  void       *data = k->code;
+  int        n_entries;
+  int        i, indx;
   const char *const sh_reltab_p = data + s->sh_offset;
-  //Elf64_Sym *symbol;
   Elf64_Rela *rel;
-  STAN_SYM *ssym;
+  STAN_SYM   *ssym;
 
   n_entries = s->sh_size / s->sh_entsize;
   for (i = 0; i < n_entries; i++)
@@ -174,14 +164,9 @@ stan_elf64_process_rela (STAN_CORE *k, Elf64_Shdr* s)
       rel = &((Elf64_Rela*)sh_reltab_p)[i];
       indx = ELF64_R_SYM(rel->r_info);
       
-
-      //dsym[indx].addr = rel->r_offset;
       ssym = (STAN_SYM *) k->dsym->p[indx];
  
       ssym->addr = rel->r_offset;
-
-      //mod_add_sym (dsym[indx].name, rel->r_offset);
-
     }
 }
 
@@ -190,12 +175,12 @@ stan_elf64_process_rela (STAN_CORE *k, Elf64_Shdr* s)
 void
 stan_elf64_process_sections (STAN_CORE *k)
 {
-  char        *sname;
-  int         i, _n_sec = 0;
-  Elf64_Ehdr* elf_hdr;
-  Elf64_Shdr *shdr;
-  Elf64_Shdr *sh_strtab;
-  char        *sh_strtab_p;
+  char         *sname;
+  int          i, _n_sec = 0;
+  Elf64_Ehdr   *elf_hdr;
+  Elf64_Shdr   *shdr;
+  Elf64_Shdr   *sh_strtab;
+  char         *sh_strtab_p;
   STAN_SEGMENT *sec;
   STAN_SYM     *ssym;
 
@@ -224,23 +209,24 @@ stan_elf64_process_sections (STAN_CORE *k)
 	  sec->esize = shdr[i].sh_entsize;
 
 	  // Store Section
-	  //printf ("*** ELF Section... Adding section and symbol (%s, %p)\n", sec->id, sec->addr);
+
 	  stan_table_add (k->sec, (STAN_ITEM*)sec);
 	  // Create symbol for the section
 	  ssym = stan_sym_new (sec->id, sec->addr);
 	  stan_sym_add_type (ssym, STAN_SYM_TYPE_SECTION);
 	  stan_table_add (k->sym, (STAN_ITEM*) ssym);
-	  //printf ("*************************\n");
 	  _n_sec++;
 	}
 
       else if (shdr[i].sh_type == SHT_SYMTAB)
 	{
 	  stan_elf64_process_symtab (k, &shdr[i]);
+	  k->flags |= STAN_CORE_FLAGS_NOT_STRIPPED;
 	}
       else if (shdr[i].sh_type == SHT_DYNSYM)
 	{
 	  stan_elf64_process_dynsymtab (k, &shdr[i]);
+	  k->flags |= STAN_CORE_FLAGS_DYNAMIC;
 	}
       else if (shdr[i].sh_type == SHT_RELA)
 	{
@@ -250,7 +236,6 @@ stan_elf64_process_sections (STAN_CORE *k)
     }
 
   // process GOT.PLT
-  // XXX: Memory corruption is here 
   for (i =0; i < _n_sec; i++)
     {
       sec = (STAN_SEGMENT*)k->sec->p[i];
@@ -276,8 +261,6 @@ stan_elf64_process_sections (STAN_CORE *k)
 		  ssym1->addr = plt_ptr;
 		  stan_table_add (k->sym, (STAN_ITEM*)ssym1);
 		}
-
-	      //printf ("  + Entry %d (%d): %p %p -> %x\n", j, indx, ptr, got_ptr, plt_ptr);
 	    }
 	}
       if (!strcmp (sec->id, ".got"))
@@ -285,7 +268,6 @@ stan_elf64_process_sections (STAN_CORE *k)
 	  int k1 = sec->size / sec->esize;
 	  printf ("Adjusting dynamic symbols as per binary '%s' (%d entries)\n", 
 		  sec->id, k1);
-
 
 	  int j;
 
@@ -303,8 +285,6 @@ stan_elf64_process_sections (STAN_CORE *k)
 		  ssym1->addr = plt_ptr;
 		  stan_table_add (k->sym, (STAN_ITEM*)ssym1);
 		}
-
-	      //printf ("  + Entry %d (%d): %p %p -> %x\n", j, indx, ptr, got_ptr, plt_ptr);
 	    }
 	}
 

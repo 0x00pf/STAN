@@ -122,14 +122,10 @@ stan_segment_free (STAN_SEGMENT *sg)
 {
   if (!sg) return -1;
 
-  //printf ("!! SEG Allocs: %d Frees:%d FREE(%s)\n", _st_seg_alloc, _st_seg_free + 1, sg->id);
   if (sg->id) free (sg->id);
-#if 0
-  if (sg->ins) free (sg->ins);
-#endif
   free (sg);
   _st_seg_free ++;
-  //printf ("!! Allocs: %d Frees:%d\n", _st_seg_alloc, _st_seg_free);
+
   return 0;
 }
 
@@ -204,12 +200,7 @@ stan_core_free (STAN_CORE *k)
   stan_table_free (k->func);
   stan_table_free (k->label);
   stan_table_free (k->comment);
-  /*
-  stan_table_free (k->seg, (STAN_ITEM_FREE) stan_segment_free);
-  stan_table_free (k->sec, (STAN_ITEM_FREE)stan_segment_free);
-  stan_table_free (k->sym, (STAN_ITEM_FREE)stan_sym_free);
-  stan_table_free (k->dsym, (STAN_ITEM_FREE)stan_sym_free);
-  */
+
   free (k);
   return -1;
 }
@@ -223,12 +214,7 @@ stan_core_clean (STAN_CORE *k)
   if (k->fd >=0) close (k->fd);
 
   printf ("+ Cleanning up core\n");
-  /*
-  stan_table_free (k->seg, (STAN_ITEM_FREE) stan_segment_free);
-  stan_table_free (k->sec, (STAN_ITEM_FREE)stan_segment_free);
-  stan_table_free (k->sym, (STAN_ITEM_FREE)stan_sym_free);
-  stan_table_free (k->dsym, (STAN_ITEM_FREE)stan_sym_free);
-  */
+
   printf ("+ Deleting Segments....\n");
   stan_table_free (k->seg);
   printf ("+ Deleting Sections....\n");
@@ -255,12 +241,6 @@ stan_core_clean (STAN_CORE *k)
   k->func = stan_table_new ((STAN_ITEM_FREE)stan_sym_free,sizeof(STAN_SYM*));
   k->label = stan_table_new ((STAN_ITEM_FREE)stan_sym_free,sizeof(STAN_SYM*));
   k->comment = stan_table_new ((STAN_ITEM_FREE)stan_comment_free,sizeof(STAN_SYM*));
-  /*  
-  k->seg = stan_table_new (sizeof(STAN_SEGMENT*));
-  k->sec = stan_table_new (sizeof(STAN_SEGMENT*));
-  k->sym = stan_table_new (sizeof(STAN_SYM*));
-  k->dsym = stan_table_new (sizeof(STAN_SYM*));
-  */
 
   return -1;
 }
@@ -282,6 +262,7 @@ stan_core_load (STAN_CORE *k, char *fname)
     }
   k->size = stan_util_get_file_size (k->fd);
   /*
+    // XXX: Keep for the patching function. To Be Implemented
   if ((k->code = mmap (NULL, k->size, PROT_READ, //| PROT_WRITE,
 		       MAP_SHARED, k->fd, 0)) == MAP_FAILED)
     {
@@ -329,6 +310,10 @@ stan_core_dump (STAN_CORE *k)
   //printf ("  - OS           : %s\n", stan_core_os_str[k->os]);
   printf ("  - Architecture : %s\n", stan_core_arch_str[k->arch]);
   printf ("  - Mode         : %s(%d)\n", stan_core_mode_str[k->mode], k->mode);
+  printf ("  - Info         : %s %s\n", IS_DYNAMIC(k) ? "Dynamic" : "Static",
+	  IS_STRIPPED(k) ? "Stripped" : "Not Stripped"
+	  );
+
 
   // Dump Segments
   for (i = 0; i < k->seg->n; i++)
@@ -495,12 +480,6 @@ stan_core_identify (STAN_CORE *k)
 	k->type = STAN_CORE_TYPE_ELF_32;
 	k->ep = elf_hdr32->e_entry;
 	// https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git/tree/arch/arm/kernel/elf.c
-#if 0
-	if ((k->ep & 1))
-	  k->mode = STAN_CORE_MODE_THUMB;
-	else if (!(k->ep & 3))
-	  k->mode = STAN_CORE_MODE_ARM;
-#endif
 	k->mode = STAN_CORE_MODE_ARM;
 	k->core_init = stan_elf32_init;
 	k->core_process = stan_elf32_process;
@@ -581,8 +560,6 @@ stan_core_add_func (STAN_CORE *k, long addr)
     }
   
   return s;
-  //return _stan_core_add_sitem (k, k->func, addr, "func");
-
 }
 
 STAN_SYM*
@@ -624,25 +601,6 @@ stan_core_dump_label (STAN_CORE *k)
 }
 
 
-#if 0
-STAN_IMETA   *
-stan_imeta_new (STAN_CORE *k, STAN_SEGMENT *s)
-{
-  if (!k) return NULL;
-  if (!s) return NULL;
-  if (s->imeta) free (s->imeta);
-  s->imeta = NULL;
-  if (s->count <= 0) return NULL;
-  if ((s->imeta = malloc (sizeof(STAN_IMETA) * s->count)) == NULL)
-    {
-      fprintf (stderr, "- Cannot allocate metadata for instructions\n");
-      return NULL;
-    }
-  memset (s->imeta, 0, sizeof(STAN_IMETA) * s->count);
-  return s->imeta;
-}
-#endif 
-
 
 int
 stan_comment_free (STAN_COMMENT *c)
@@ -658,7 +616,6 @@ STAN_IMETA   *
 stan_imeta_new (STAN_CORE *k, STAN_SEGMENT *s)
 {
   if (!k) return NULL;
-  //if (!s) return NULL;
 
   if (k->count <= 0) return NULL;
   //XXX: IMETA struct only holds pointer to symbols referenced in other tables
@@ -918,10 +875,8 @@ stan_core_find_func_section (STAN_CORE *k, long addr)
 int           
 stan_core_add_comment (STAN_CORE *k, long addr, char *comment)
 {
-  //STAN_SEGMENT *s;
   STAN_COMMENT *c;
-  //int          i;
-
+ 
   if (!k) return -1;
   if (!addr) return -1;
   if (!comment) return -1;
@@ -951,14 +906,12 @@ stan_core_add_comment (STAN_CORE *k, long addr, char *comment)
 int           
 stan_core_del_comment (STAN_CORE *k, long addr)
 {
-  //  STAN_SEGMENT *s;
   STAN_COMMENT *c;
-  //int          i;
 
   if (!k) return -1;
   if (!addr) return -1;
 
-  if ((c = (STAN_COMMENT*) stan_table_find (k->comment, addr)) == NULL)
+  if ((c = (STAN_COMMENT*) stan_table_find (k->comment, addr)) != NULL)
     {
       if (c->comment) free (c->comment);
       c->comment = NULL;

@@ -59,7 +59,6 @@ stan_ana_process_current_code (STAN_CORE *k)
   STAN_IMETA    *imeta;
   int           i;
 
-
   // Create Metadata array
   imeta = stan_imeta_new (k, NULL);
 
@@ -68,8 +67,7 @@ stan_ana_process_current_code (STAN_CORE *k)
       /* Add functions and labels */
       size_t j;
       cs_insn *ins;
-      
-
+     
       /* Preliminary opcode analysis */
 
       for (j = 0; j < k->count; j++) 
@@ -84,7 +82,7 @@ stan_ana_process_current_code (STAN_CORE *k)
 	    imeta[j].type = STAN_IMETA_POP;
 	  else if (!strncasecmp (ins->mnemonic, "mov", 3)) 
 	    imeta[j].type = STAN_IMETA_MOV;
-	  /* Comparission instructions */
+	  /* Comparision instructions */
 	  else if (!strncasecmp (ins->mnemonic, "cmp", 3)) 
 	    imeta[j].type = STAN_IMETA_CMP;
 	  else if (!strncasecmp (ins->mnemonic, "test", 4)) 
@@ -134,16 +132,12 @@ stan_ana_process_current_code (STAN_CORE *k)
 		    {
 		      if (k->arch == STAN_CORE_ARCH_X86)
 			{
-			  
-			  //if (detail->x86.operands[0].type == CS_OP_IMM)
 			  if (detail->x86.operands[0].type == X86_OP_IMM)
 			    {
 			      sym = stan_core_add_label (k, detail->x86.operands[0].imm);
 			      if (sym) imeta[j].tlabel = sym;
 			    }
 			  imeta[j].type = STAN_IMETA_JMP;
-
-			  
 			}
 		      else if (k->arch == STAN_CORE_ARCH_ARM)
 			{
@@ -155,7 +149,6 @@ stan_ana_process_current_code (STAN_CORE *k)
 			}
 		      
 		    }
-		  
 		  
 		}
 	    }
@@ -203,7 +196,6 @@ stan_ana_process_section ( STAN_CORE *k, STAN_SEGMENT *s)
   // whatever it is
   stan_ana_process_current_code (k);
 
-
   return addr;
 }
 
@@ -249,7 +241,7 @@ stan_ana_process_addr (STAN_CORE *k, long addr)
 int
 stan_ana_init_dis (STAN_CORE *k)
 {
-  csh handle;
+  csh   handle;
   char  *val;
   int   syntax = CS_OPT_SYNTAX_INTEL;
   int   arch, mode;
@@ -266,7 +258,6 @@ stan_ana_init_dis (STAN_CORE *k)
   if ((val = stan_cfg_get ("syntax")))
     if (strncasecmp (val, "intel", 5))
 	syntax = CS_OPT_SYNTAX_ATT;
-
 
   arch = stan_core_get_cs_arch (k);
   mode = stan_core_get_cs_mode (k);

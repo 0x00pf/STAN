@@ -82,7 +82,6 @@ stan_elf32_process_symtab (STAN_CORE *k, Elf32_Shdr* s)
   void *data = k->code;
   Elf32_Ehdr* elf_hdr = (Elf32_Ehdr *) data;
   Elf32_Shdr *shdr = (Elf32_Shdr *)(data + elf_hdr->e_shoff);
-  //Elf32_Shdr *sh_strtab = &shdr[elf_hdr->e_shstrndx];
   const char *const sh_strtab_p = (char *)(data + shdr[s->sh_link].sh_offset);
   const char *const sh_symtab_p = data + s->sh_offset;
   Elf32_Sym *symbol;
@@ -104,17 +103,13 @@ stan_elf32_process_symtab (STAN_CORE *k, Elf32_Shdr* s)
       else
 	sname = "NONAME";
 
-      printf ("** ELF_Symtab Adding Symbol to table (%s,%p)\n", sname, symbol->st_value);
       ssym = stan_sym_new (sname, symbol->st_value);
       stan_table_add (k->sym, (STAN_ITEM*)ssym);
 
       if (ELF32_ST_TYPE(symbol->st_info) == STT_FUNC)
 	{
 	  ssym->type = STAN_SYM_TYPE_FUNC;
-	  //stan_sym_add_type (ssym, STAN_SYM_TYPE_FUNC); 
-	  //printf ("IS FUNCTION\n");
 	}
-      //printf ("*************************\n");
     }
 }
 
@@ -122,25 +117,21 @@ stan_elf32_process_symtab (STAN_CORE *k, Elf32_Shdr* s)
 void
 stan_elf32_process_dynsymtab (STAN_CORE *k, Elf32_Shdr* s)
 {
-  void *data = k->code;
-  //char *sname;
-  int n_entries;
-  int  i;
-  Elf32_Ehdr* elf_hdr = (Elf32_Ehdr *) data;
+  void       *data = k->code;
+  int        n_entries;
+  int        i;
+  Elf32_Ehdr *elf_hdr = (Elf32_Ehdr *) data;
   Elf32_Shdr *shdr = (Elf32_Shdr *)(data + elf_hdr->e_shoff);
-  //Elf32_Shdr *sh_strtab = &shdr[elf_hdr->e_shstrndx];
   const char *const sh_strtab_p = (char *)(data + shdr[s->sh_link].sh_offset);
   const char *const sh_symtab_p = data + s->sh_offset;
-  Elf32_Sym *symbol;
-  STAN_SYM  *ssym;
-  char buffer[1024];
-
+  Elf32_Sym  *symbol;
+  STAN_SYM   *ssym;
+  char       buffer[1024];
 
   n_entries = s->sh_size / s->sh_entsize;
   for (i = 0; i < n_entries; i++)
     {
       symbol = &((Elf32_Sym *)sh_symtab_p)[i];
-
 
       if (symbol->st_name)
 	snprintf (buffer, 1024, "%s@plt", (char*) (sh_strtab_p + symbol->st_name));
@@ -150,9 +141,7 @@ stan_elf32_process_dynsymtab (STAN_CORE *k, Elf32_Shdr* s)
       printf ("%02d %s %8x\n", i, buffer, symbol->st_value);
       ssym = stan_sym_new (buffer, symbol->st_value);
       stan_table_add_dups (k->dsym, (STAN_ITEM*)ssym);
-      //printf ("*************************\n");
     }
-
 }
 
 
@@ -160,18 +149,12 @@ stan_elf32_process_dynsymtab (STAN_CORE *k, Elf32_Shdr* s)
 void
 stan_elf32_process_rela (STAN_CORE *k, Elf32_Shdr* s)
 {
-  void *data = k->code;
-  //char *sname;
-  int n_entries;
-  int  i, indx;
-  //Elf32_Ehdr* elf_hdr = (Elf32_Ehdr *) data;
-  //Elf32_Shdr *shdr = (Elf32_Shdr *)(data + elf_hdr->e_shoff);
-  //Elf32_Shdr *sh_strtab = &shdr[elf_hdr->e_shstrndx];
-  //const char *const sh_strtab_p = (char *)(data + shdr[s->sh_link].sh_offset);
+  void              *data = k->code;
+  int               n_entries;
+  int               i, indx;
   const char *const sh_reltab_p = data + s->sh_offset;
-  //Elf32_Sym *symbol;
-  Elf32_Rel *rel;
-  STAN_SYM *ssym;
+  Elf32_Rel         *rel;
+  STAN_SYM          *ssym;
 
   n_entries = s->sh_size / s->sh_entsize;
   for (i = 0; i < n_entries; i++)
@@ -179,14 +162,9 @@ stan_elf32_process_rela (STAN_CORE *k, Elf32_Shdr* s)
       rel = &((Elf32_Rel*)sh_reltab_p)[i];
       indx = ELF32_R_SYM(rel->r_info);
       
-
-      //dsym[indx].addr = rel->r_offset;
       ssym = (STAN_SYM *) k->dsym->p[indx];
  
       ssym->addr = rel->r_offset;
-
-      //mod_add_sym (dsym[indx].name, rel->r_offset);
-
     }
 }
 
@@ -195,12 +173,12 @@ stan_elf32_process_rela (STAN_CORE *k, Elf32_Shdr* s)
 void
 stan_elf32_process_sections (STAN_CORE *k)
 {
-  char        *sname;
-  int         i, _n_sec = 0;
-  Elf32_Ehdr* elf_hdr;
-  Elf32_Shdr *shdr;
-  Elf32_Shdr *sh_strtab;
-  char        *sh_strtab_p;
+  char         *sname;
+  int          i, _n_sec = 0;
+  Elf32_Ehdr*  elf_hdr;
+  Elf32_Shdr   *shdr;
+  Elf32_Shdr   *sh_strtab;
+  char         *sh_strtab_p;
   STAN_SEGMENT *sec;
   STAN_SYM     *ssym;
 
@@ -229,23 +207,23 @@ stan_elf32_process_sections (STAN_CORE *k)
 	  sec->esize = shdr[i].sh_entsize;
 
 	  // Store Section
-	  //printf ("*** ELF Section... Adding section and symbol (%s, %p)\n", sec->id, sec->addr);
 	  stan_table_add (k->sec, (STAN_ITEM*)sec);
 	  // Create symbol for the section
 	  ssym = stan_sym_new (sec->id, sec->addr);
 	  stan_sym_add_type (ssym, STAN_SYM_TYPE_SECTION);
 	  stan_table_add (k->sym, (STAN_ITEM*) ssym);
-	  //printf ("*************************\n");
 	  _n_sec++;
 	}
 
       else if (shdr[i].sh_type == SHT_SYMTAB)
 	{
 	  stan_elf32_process_symtab (k, &shdr[i]);
+	  k->flags |= STAN_CORE_FLAGS_NOT_STRIPPED;
 	}
       else if (shdr[i].sh_type == SHT_DYNSYM)
 	{
 	  stan_elf32_process_dynsymtab (k, &shdr[i]);
+	  k->flags |= STAN_CORE_FLAGS_DYNAMIC;
 	}
       else if (shdr[i].sh_type == SHT_REL)
 	{
@@ -280,14 +258,10 @@ stan_elf32_process_sections (STAN_CORE *k)
 		 STAN_SYM* ssym1;
 		 if (ssym) 
 		   {
-		     //printf ("Updating symbol: %s %p\n", ssym->id, plt_ptr1);
 		     ssym1 = stan_sym_clone (ssym);
 		     ssym1->addr = plt_ptr1;
 		     stan_table_add (k->sym, (STAN_ITEM*) ssym1);
 		   }
-
-		 //printf ("  + Entry %d : %p %p -> %x\n", j, ptr, got_ptr, plt_ptr1);
-
 	       }
 	   }
        }
@@ -315,8 +289,7 @@ stan_elf32_process_sections (STAN_CORE *k)
 		     ssym1->addr = plt_ptr;
 		     stan_table_add (k->sym, (STAN_ITEM*) ssym1);
 		   }
-		 
-		 //printf ("  + Entry %d : %p %p -> %x\n", j, ptr, got_ptr, plt_ptr);
+		
 	       }
 	   }
 	 

@@ -74,6 +74,12 @@
 #define STAN_IMETA_CMP     7
 #define STAN_IMETA_SYSCALL 8
 
+#define STAN_CORE_FLAGS_NOT_STRIPPED 1
+#define STAN_CORE_FLAGS_DYNAMIC      2
+
+#define IS_STRIPPED(k) (!(k->flags & STAN_CORE_FLAGS_NOT_STRIPPED))
+#define IS_DYNAMIC(k) (k->flags & STAN_CORE_FLAGS_DYNAMIC)
+
 
 /*
  *  Operartors
@@ -135,6 +141,7 @@ typedef struct stan_core_t
   int        arch; // Architecture of the core
   int        mode; // 32/64 bits
   long       ep;   // Entry Point
+  int        flags; 
   int        l_cnt;
   csh        handle;
   // This information is temporal

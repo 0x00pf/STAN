@@ -48,14 +48,12 @@ stan_table_new (STAN_ITEM_FREE f, int esize)
 }
 
 int        
-//stan_table_free (STAN_TABLE* t, STAN_ITEM_FREE f)
 stan_table_free (STAN_TABLE* t)
 {
   int   i;
 
   if (!t) return -1;
 
-  //printf ("!! Freeing table of %d items\n", t->n);
   // Release  items
   for (i = 0; i < t->n; i++) if (t->p[i]) t->f (t->p[i]);
   
@@ -117,7 +115,6 @@ stan_table_add  (STAN_TABLE* t, STAN_ITEM* e)
 
   if (!t) return -1;
   if (!e) return -1;
-  //if (!addr) return -1; // Do not add symbols with NULL addresses??
 
   // Check if item already exists
   i = t->n;
@@ -130,7 +127,6 @@ stan_table_add  (STAN_TABLE* t, STAN_ITEM* e)
 	  fprintf (stderr, "- Cannot resize STAN table\n");
 	  return -1;
 	}
-      //printf ("** Adding Symbol to table (%s,%p)\n", e->name, e->addr);
       t->p[i] = e;
     }
   else // The item exists... shall we update?
@@ -142,7 +138,6 @@ stan_table_add  (STAN_TABLE* t, STAN_ITEM* e)
 	      free (s->name);
 	      s->name = strdup (e->name);
 	    }
-	  //printf ("** Freeing external symbol (%s, %p)\n", e->name, e->addr);
 	  t->f (e);
 	}
     }
@@ -170,7 +165,6 @@ stan_table_find_by_name (STAN_TABLE* t, char *name)
   if (!t) return NULL;
   for (i = 0; i < t->n; i++)
     {
-      //printf ("looking for '%s'... %s(%d)\n", name, t->p[i]->name, t->n);
       if (!strcmp (t->p[i]->name, name)) return t->p[i];
     }
   

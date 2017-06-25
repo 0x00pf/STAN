@@ -52,7 +52,7 @@ stan_sym_free (STAN_SYM *s)
   if (!s) return -1;
 
   if (s->id) free (s->id);
-  //memset (s, 0, sizeof(STAN_SYM));
+
   free (s);
 
   return 0;
@@ -68,6 +68,7 @@ stan_sym_clone (STAN_SYM *s)
   c->type = s->type;
   return c;
 }
+
 // XXX: To be removed???
 int         
 stan_sym_set_data (STAN_SYM *s, void *p)

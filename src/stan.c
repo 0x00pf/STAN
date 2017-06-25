@@ -29,45 +29,71 @@
 #include "utils.h"
 #include "symb.h"
 
-static char *cmd[] = {
-  "case.dump",
-  "case.save",
-  "case.load",
-  "core.info",
-  "core.symbols",
-  "core.functions",
-  "core.labels",
-  "core.load",
-  "core.ana",
-  "cfg.dump",
-  "cfg.get",
-  "cfg.set",
-  "dis.section",
-  "dis.function",
-  "dis.addr",
-  "func.rename",
-  "label.rename",
-  "comment.add",
-  "comment.del",
-  "mem.dump",
-  "mem.poke",
-  "func.def",
-  "sym.def",
-  "help.abi",
-  "quit",
-  NULL
+typedef struct stan_cmd_t
+{
+  char *id;
+  char *help;
+} STAN_CMD;
+
+
+static STAN_CMD cmd[] = {
+  {"case.dump", "Dumps current case information\n"},
+  {"case.save", "Saves current case. File used is corename.srep\n"},
+  {"case.load", "Loads a previously saved case. Ex: case.load filename.srep\n"},
+  {"core.info", "Shows core info\n"},
+  {"core.symbols", "Shows identified core symbols\n"},
+  {"core.functions", "Shows identified core functions\n"},
+  {"core.labels", "Shows identified core labels\n"},
+  {"core.load", "Loads a core (binary) and analyses it. Ex: core.load binary\n"},
+  {"core.ana", "Not yet implemented\n"},
+  {"cfg.dump", "Shows current STAN configuration\n"},
+  {"cfg.get", "Gets a configuration value. Ex: cfg.get cfg_val\n"},
+  {"cfg.set", "Sets a configuration value.Ex: cfg.set cfg_val val\n"},
+  {"dis.section", "Disassembles the specified section. Ex: dis.section section_name\n"},
+  {"dis.function", "Disassembles the specified function. Ex: dis.function function_name\n"},
+  {"dis.addr", "Disassembles the indicated number of instruction starting from the specified address.Ex: dis.add addr count\n"},
+  {"func.rename", "Renames a function. Ex: func.rename old_name new_name\n"},
+  {"label.rename", "Renames a label. Ex: label.rename old_name new_name\n"},
+  {"comment.add", "Adds a comment to the specified addres. Ex: comment.add addr coment\n"},
+  {"comment.del", "Deleted a comment at the specified addres. Ex: comment.del addr\n"},
+  {"mem.dump", "Dumps memory. Ex: mem.dump [x|p] addr count.\n\t\t   fmt = x : dumps hex bytes\n\t\t   fmt = p : dumps pointers\n"},
+  {"mem.poke", "Writes to memory.Ex:   mem.poke [x|p] addr value.\n\t\t   fmt = x : writes hex string\n\t\t   fmt = p : Writes pointer\n"},
+  {"func.def", "Defines a function at the specified address. Ex: func.def function_name addr\n"},
+  {"sym.def", "Defines a symbol at the specified address. Ex: sym.def symbol_name addr\n"},
+  {"help.abi", "Shows current ABI for the loaded core\n"},
+  {"help", "Shows command help\n"},
+   {"quit", "By STAN\n"},
+   {NULL, NULL}
 };
 
 typedef void* (*CMD_FUNC)(STAN_CASE *, char *pars);
+
+static
+int 
+_find_cmd (char *c)
+{
+  int i;
+  for (i = 0; cmd[i].id; i++)
+    if (!strncmp (c, cmd[i].id, strlen(cmd[i].id))) return i;
+  return -1;
+}
 
 int
 run_cmd (STAN_CASE *c, char *buffer1)
 {
   char *buffer = strdup (buffer1);
-  int i = strlen(buffer);
+  int   cmd_indx;
+  int   i = strlen(buffer);
 
   while (buffer[i - 1] == ' ') i--;
   buffer[i] = 0;
+
+  cmd_indx = _find_cmd (buffer);
+  if (cmd_indx < 0) 
+    {
+      fprintf (stderr, "- Unknown command '%s'\n", buffer);
+      return 0;
+    }
 
   if (!buffer) return 0;
   if (!strncasecmp (buffer, "case.dump", strlen ("case.dump")))
@@ -76,6 +102,11 @@ run_cmd (STAN_CASE *c, char *buffer1)
     }
   else if (!strncasecmp (buffer, "case.load", strlen ("case.load")))
     {
+      if (strlen(buffer) == strlen(cmd[cmd_indx].id))
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
       stan_case_free (c);
       c = stan_case_load (c, buffer + strlen ("case.load "));
     }
@@ -143,6 +174,12 @@ run_cmd (STAN_CASE *c, char *buffer1)
 
   else if (!strncasecmp (buffer, "core.load", strlen ("core.load")))
     {
+      if (strlen(buffer) == strlen(cmd[cmd_indx].id))
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+
       stan_core_clean (c->k);
       stan_core_load (c->k, buffer + strlen ("core.load "));
       stan_core_identify (c->k);
@@ -150,17 +187,41 @@ run_cmd (STAN_CASE *c, char *buffer1)
     }
   else if (!strncasecmp (buffer, "dis.section", strlen ("dis.section")))
     {
+      if (strlen(buffer) == strlen(cmd[cmd_indx].id))
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+
       stan_dis_section (c->k, buffer + strlen ("dis.section "));
     }
   else if (!strncasecmp (buffer, "dis.function", strlen ("dis.function")))
     {
+      if (strlen(buffer) == strlen(cmd[cmd_indx].id))
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+
       stan_dis_func (c->k, buffer + strlen ("dis.function "));
     }
   else if (!strncasecmp (buffer, "dis.addr", strlen ("dis.addr")))
     {
       long addr;
-      int  count;
-      sscanf (buffer + strlen ("dis.addr "), "%p %d", &addr, &count);
+      int  count, nargs;
+      if (strlen(buffer) == strlen(cmd[cmd_indx].id))
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+
+      nargs = sscanf (buffer + strlen ("dis.addr "), "%p %d", (void**)&addr, &count);
+      if (nargs != 2)
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+
       stan_dis_addr (c->k, addr, count);
     }
 
@@ -170,12 +231,24 @@ run_cmd (STAN_CASE *c, char *buffer1)
     }
   else if (!strncasecmp (buffer, "cfg.get", strlen ("cfg.get")))
     {
+      if (strlen(buffer) == strlen(cmd[cmd_indx].id))
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+
       printf ("%s\n", stan_cfg_get (buffer + strlen ("cfg.get ")));
     }
   else if (!strncasecmp (buffer, "cfg.set", strlen ("cfg.set")))
     {
       // FIXME:... what can I say... I'm feeling lazy
       //       Just minimal functionality  
+      if (strlen(buffer) == strlen(cmd[cmd_indx].id))
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+
       char *aux= buffer + strlen ("cfg.set ");
       char *val = strchr (aux,  ' ');
       *val = 0;
@@ -186,22 +259,46 @@ run_cmd (STAN_CASE *c, char *buffer1)
     {
       char name1[1024];
       char name2[1024];
+      int  nargs;
+      if (strlen(buffer) == strlen(cmd[cmd_indx].id))
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
 
       // FIXME:... what can I say... I'm feeling lazy
       //       Just minimal functionality  
       char *aux= buffer + strlen ("func.rename ");
-      sscanf (aux, "%s %s", name1, name2);
+      nargs = sscanf (aux, "%s %s", name1, name2);
+      if (nargs != 2)
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+
       stan_core_rename_func (c->k, name1, name2);
     }
   else if (!strncasecmp (buffer, "label.rename", strlen ("label.rename")))
     {
       char name1[1024];
       char name2[1024];
+      int  nargs;
+      if (strlen(buffer) == strlen(cmd[cmd_indx].id))
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
 
       // FIXME:... what can I say... I'm feeling lazy
       //       Just minimal functionality  
       char *aux= buffer + strlen ("label.rename ");
-      sscanf (aux, "%s %s", name1, name2);
+      nargs = sscanf (aux, "%s %s", name1, name2);
+      if (nargs != 2)
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+
       stan_core_rename_label (c->k, name1, name2);
     }
 
@@ -209,11 +306,24 @@ run_cmd (STAN_CASE *c, char *buffer1)
     {
       char name1[1024];
       long addr;    // XXX: Maybe we should make all address void * ??
+      int  nargs;
+      if (strlen(buffer) == strlen(cmd[cmd_indx].id))
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+
 
       // FIXME:... what can I say... I'm feeling lazy
       //       Just minimal functionality  
       char *aux= buffer + strlen ("func.def ");
-      sscanf (aux, "%s %p", name1, (void**)&addr);
+      nargs = sscanf (aux, "%s %p", name1, (void**)&addr);
+      if (nargs != 2)
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+
       printf ("+ Defining new funcion '%s'@%p\n", name1, (void*)addr);
       stan_core_def_func (c->k, name1, addr);
     }
@@ -221,11 +331,23 @@ run_cmd (STAN_CASE *c, char *buffer1)
     {
       char name1[1024];
       long addr;    // XXX: Maybe we should make all address void * ??
+      int  nargs;
+      if (strlen(buffer) == strlen(cmd[cmd_indx].id))
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
 
       // FIXME:... what can I say... I'm feeling lazy
       //       Just minimal functionality  
       char *aux= buffer + strlen ("sym.def ");
-      sscanf (aux, "%s %p", name1, (void**)&addr);
+      nargs = sscanf (aux, "%s %p", name1, (void**)&addr);
+      if (nargs != 2)
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+
       printf ("+ Defining new symbol '%s'@%p\n", name1, (void*)addr);
       stan_core_def_sym (c->k, name1, addr);
     }
@@ -234,15 +356,25 @@ run_cmd (STAN_CASE *c, char *buffer1)
     {
       long addr;
       char *comment;
+      if (strlen(buffer) == strlen(cmd[cmd_indx].id))
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
 
       // FIXME:... what can I say... I'm feeling lazy
       //       Just minimal functionality  
       char *aux= buffer + strlen ("comment.add ");
-      sscanf (aux, "%p", (void**)&addr);
+      if (sscanf (aux, "%p", (void**)&addr) == 0)
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+
       if ((comment = strchr (aux + 1, ' ')) == NULL)
 	{
-	  fprintf (stderr, "- Malformed command: comment hex_address comment\n");
-	  return -1;
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
 	}
       comment++;
       printf ("+ Adding comment '%s' at %p\n", comment, (void*) addr);
@@ -251,11 +383,22 @@ run_cmd (STAN_CASE *c, char *buffer1)
   else if (!strncasecmp (buffer, "comment.del", strlen ("comment.del")))
     {
       long addr;
+      if (strlen(buffer) == strlen(cmd[cmd_indx].id))
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+
 
       // FIXME:... what can I say... I'm feeling lazy
       //       Just minimal functionality  
       char *aux= buffer + strlen ("comment.del ");
-      sscanf (aux, "%p", (void**)&addr);
+      if ((sscanf (aux, "%p", (void**)&addr)) == 0)
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+
       printf ("+ deleting comment at %p\n", (void *)addr);
       stan_core_del_comment (c->k, addr);
     }
@@ -265,13 +408,18 @@ run_cmd (STAN_CASE *c, char *buffer1)
       long addr;
       long len;
       int  narg;
+      if (strlen(buffer) == strlen(cmd[cmd_indx].id))
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
 
       // FIXME:... what can I say... I'm feeling lazy
       //       Just minimal functionality  
       char *aux= buffer + strlen ("mem.dump ");
       if ((narg = sscanf (aux, "%s %p %ld", fmt, (void**) &addr, &len)) != 3)
 	{
-	  fprintf (stderr, "Invalid number of parameters\n");
+	  printf ("\t%s", cmd[cmd_indx].help);
 	  return 0;
 	}
       stan_dis_dump_block (c->k, fmt, addr, len);
@@ -282,17 +430,34 @@ run_cmd (STAN_CASE *c, char *buffer1)
       char str[1024];
       long addr;
       int  narg;
+      if (strlen(buffer) == strlen(cmd[cmd_indx].id))
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
 
       // FIXME:... what can I say... I'm feeling lazy
       //       Just minimal functionality  
       char *aux= buffer + strlen ("mem.poke ");
       if ((narg = sscanf (aux, "%s %p %s", fmt, (void**) &addr, str)) != 3)
 	{
-	  fprintf (stderr, "Invalid number of parameters\n");
+	  printf ("\t%s", cmd[cmd_indx].help);
 	  return 0;
 	}
       stan_dis_poke_block (c->k, fmt, addr, str);
     }
+  else if (!strncasecmp (buffer, "help", strlen ("help")))
+    {
+      int i;
+      for (i = 0; cmd[i].id;  i++)
+	{
+	  if (strlen (cmd[i].id) < 8) 
+	      printf ("%s\t\t: %s", cmd[i].id, cmd[i].help);
+	  else
+	      printf ("%s\t: %s", cmd[i].id, cmd[i].help);
+	}
+    }
+
   else if (!strncasecmp (buffer, "case.save", strlen ("case.save")) || 
 	   !strncasecmp (buffer, ":w", strlen (":w"))
 	   )
@@ -311,9 +476,6 @@ run_cmd (STAN_CASE *c, char *buffer1)
   return 0;
 }
 
-
-// https://robots.thoughtbot.com/tab-completion-in-gnu-readline
-// http://web.mit.edu/gnu/doc/html/rlman_2.html
 char **
 cmd_completion(const char *text, int start, int end);
 char *
@@ -328,29 +490,30 @@ cmd_completion(const char *text, int start, int end)
   
   if (start == 0)
     matches = (char **) rl_completion_matches (text, cmd_generator);
-    //matches = (char **) completion_matches (text, cmd_generator);
 
-
-  return matches;
-      
+  return matches;     
 }
 
 char *
 cmd_generator(const char *text, int state)
 {
-    static int list_index, len;
-    char *name;
+  static int list_index, len;
+  char *name;
+  
+  if (!state) 
+    {
+      list_index = 0;
+      len = strlen(text);
+    }
+  
 
-    if (!state) {
-        list_index = 0;
-        len = strlen(text);
+  while ((name = cmd[list_index++].id)) {   
+    if (strncmp(name, text, len) == 0) {
+      return strdup(name);
     }
 
-    while ((name = cmd[list_index++])) {
-        if (strncmp(name, text, len) == 0) {
-            return strdup(name);
-        }
-    }
+  }
+  
     return NULL;
 }
 

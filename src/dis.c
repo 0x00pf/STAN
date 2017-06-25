@@ -30,6 +30,7 @@
 #include "core.h"
 #include "ana.h"
 #include "dis.h" 
+
 /* Mnemonic color table */
 char *mnemonic_color[] = {
   RESET,      // STAN_IMETA_NORMAL,
@@ -47,23 +48,18 @@ char *mnemonic_color[] = {
 /* Local functions */
 /****************************************************/
 
-
 static int
 _stan_dis_op (STAN_CORE *k, STAN_SEGMENT *s, int i)
 {
   int        j;
   cs_insn    *ins;
-  //STAN_IMETA *im;
   long       eip; 
-  cs_detail *detail;
+  cs_detail  *detail;
   int        n_ops = 0;
   char       *aux;
 
   ins = &k->ins[i];
-  //im = &(s->imeta[i]);
-
   eip = ins->address; // Current IP
-
   
   detail = ins->detail;
   if (!detail ) return 0; // Nothing to do
@@ -90,8 +86,18 @@ _stan_dis_op (STAN_CORE *k, STAN_SEGMENT *s, int i)
 		printf (FG_GREEN "# ! %p " RESET, 
 			(void*)(eip + detail->x86.operands[j].mem.disp + ins->size)); 
 	    }
-#if 0
-	  else
+#if 1
+	  else 
+	    {
+	      aux = stan_dis_check_ptr (k, detail->x86.operands[j].mem.disp);
+	      if (aux) 
+		{
+		  printf ("# %s " RESET, aux);
+		  free (aux);
+		  aux = NULL;
+		}
+
+	      /*	      
 	    printf ("; SEGMENT: %s BASE: %s Index:%s Scale:%d Disp:%d", 
 		    detail->x86.operands[j].mem.segment ==  X86_REG_INVALID ? "N/A" :
 		    cs_reg_name (k->handle, detail->x86.operands[j].mem.segment),
@@ -102,6 +108,8 @@ _stan_dis_op (STAN_CORE *k, STAN_SEGMENT *s, int i)
 		    detail->x86.operands[j].mem.scale,
 		    detail->x86.operands[j].mem.disp
 		    );
+	      */
+	    }
 #endif
 	}
 
@@ -187,7 +195,6 @@ _stan_dis_inst (STAN_CORE *k, STAN_SEGMENT *s, int i)
   STAN_COMMENT *com;
   STAN_SYM   *l;
 
-  //ins = s->ins;
   ins = &k->ins[i];
   im = &(k->imeta[i]);
   /* Processing single instruction */
@@ -219,13 +226,11 @@ _stan_dis_inst (STAN_CORE *k, STAN_SEGMENT *s, int i)
   if (im->type == STAN_IMETA_JMP && im->tlabel)
     {
       stan_printf (BG_RED2, "\t<%s>\t", im->tlabel->id);
-      //stan_printf (FG_GREEN,   "\t\t#%s", ins->op_str);
       printf ("\t\t");
     }
   else if (im->type == STAN_IMETA_CALL && im->tfunc)
     {
       stan_printf (BG_GREEN2, "\t<%s>\t", im->tfunc->id);
-      //stan_printf (FG_GREEN,  "\t\t# %s", ins->op_str);
       printf ("\t\t");
     }
   else
@@ -238,7 +243,9 @@ _stan_dis_inst (STAN_CORE *k, STAN_SEGMENT *s, int i)
 
   printf (" \n");
   if ((com = (STAN_COMMENT*) stan_table_find (k->comment, ins->address)) != NULL)
-    stan_printf (FG_LWHITE, "%41s %s\n" RESET, ";", com->comment);
+    {
+      if (com->comment) stan_printf (FG_LWHITE, "%41s %s\n" RESET, ";", com->comment);
+    }
 
   return 0;
 }
@@ -327,20 +334,19 @@ stan_dis_func (STAN_CORE *k, char *sname)
 	  printf ("[%d] %d,%ld\n", j, cnt + 1, k->count);
 	  break;
 	}
-      //if (s->imeta[j].type == STAN_IMETA_RET) break;
 
       if ((_s1 = (STAN_SYM*)stan_table_find (k->sym, k->ins[j + 1].address)) != NULL) 
 	{
 	  if ((_s1->type == STAN_SYM_TYPE_FUNC) |
 	      (_s1->type == STAN_SYM_TYPE_SECTION))
 	    {
-	      printf ("+ Stopped after founding symbol '%s' (%d instructions)\n", _s1->id, cnt);
+	      printf ("+ Stopped after finding symbol '%s' (%d instructions)\n", _s1->id, cnt);
 	      break;
 	    }
 	}
       if ((_s1 = (STAN_SYM*)stan_table_find (k->func, k->ins[j + 1].address)) != NULL) 
 	{
-	      printf ("+ Stopped after founding symbol '%s' (%d instructions)\n", _s1->id, cnt);
+	      printf ("+ Stopped after finding symbol '%s' (%d instructions)\n", _s1->id, cnt);
 	      break;
 
 	}
@@ -452,8 +458,6 @@ stan_dis_addr (STAN_CORE *k, long addr, size_t count)
       if (count > k->count) count1 = k->count;
       else count1 = count;
     }
-  
-
 
   insn = k->ins;
   if (count <= 1)
@@ -515,7 +519,6 @@ stan_dis_dump_mem (STAN_CORE *k, long addr)
   else // Binary data
     {
       char *p = buffer;
-      //p += sprintf (p, "%p ", (int*)&c[i]);
       p += sprintf (p, "%p ", (int*)&c[0]);
     }
     
@@ -538,7 +541,7 @@ stan_dis_check_ptr (STAN_CORE *k, long ptr)
   memset (buffer, 0, 1024);
   if (ptr == 0) return NULL;
   s = (STAN_SYM*) stan_table_find (k->sym, ptr);
-  //if (s) printf ("SYMBOL: %p %s %p\n", ptr, s->id, s->addr);
+
   _n_sec = k->sec->n;
   for (i = 0; i < _n_sec; i++)
     {

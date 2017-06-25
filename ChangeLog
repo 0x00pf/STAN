@@ -1,4 +1,8 @@
 
+Sun Jun 25 18:42:16 CEST 2017
+	* Added help for commands accepting parameters and general help command
+	* Fixed some minor bugs
+
 Sat Jun 24 16:28:11 CEST 2017
 	* Updated code to disassemble on the fly
 	* ARM Thumb code still does not work :(
