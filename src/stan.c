@@ -525,7 +525,7 @@ main (int argc, char *argv[])
   STAN_CORE *k;
 
 
-  printf ("STAN is a sTAtic aNalyser. v 0.1\n");
+  printf ("STAN is a sTAtic aNalyser. v 0.4\n");
   printf ("(c) pico\n\n");
   // TODO: Command-line args processing
 
