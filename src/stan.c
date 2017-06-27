@@ -29,6 +29,10 @@
 #include "utils.h"
 #include "symb.h"
 
+static  STAN_CASE *c = NULL;
+static  STAN_CORE *k = NULL;
+
+
 typedef struct stan_cmd_t
 {
   char *id;
@@ -89,7 +93,7 @@ run_cmd (STAN_CASE *c, char *buffer1)
   buffer[i] = 0;
 
   cmd_indx = _find_cmd (buffer);
-  if (cmd_indx < 0) 
+  if (i > 2 && cmd_indx < 0) 
     {
       fprintf (stderr, "- Unknown command '%s'\n", buffer);
       return 0;
@@ -470,29 +474,137 @@ run_cmd (STAN_CASE *c, char *buffer1)
     {
       return 1;
     }
+  else
+    {
+      fprintf (stderr, "- Unknown command '%s'\n", buffer);
+      return 0;
+    }
 
 
 
   return 0;
 }
 
-char **
-cmd_completion(const char *text, int start, int end);
-char *
-cmd_generator(const char *text, int state);
+char **cmd_completion(const char *text, int start, int end);
+char *cmd_generator(const char *text, int state);
+char *func_generator(const char *text, int state);
+char *label_generator(const char *text, int state);
+char *section_generator(const char *text, int state);
 
 char **
 cmd_completion(const char *text, int start, int end)
 {
   char **matches;
+  char *current = rl_line_buffer;
 
   matches = (char **)NULL;
   
   if (start == 0)
     matches = (char **) rl_completion_matches (text, cmd_generator);
+  else if (!strncmp (current, "dis.function ", strlen ("dis.function ")) ||
+	   !strncmp (current, "func.rename ", strlen ("func.rename "))
+	   )
+    {
+      matches = (char **) rl_completion_matches (text, func_generator);
+    }
+  else if (!strncmp (current, "label.rename ", strlen ("label.rename ")))
+    {
+      matches = (char **) rl_completion_matches (text, label_generator);
+    }
+  else if (!strncmp (current, "dis.section ", strlen ("dis.section ")))
+    {
+      matches = (char **) rl_completion_matches (text, section_generator);
+    }
 
   return matches;     
 }
+
+
+char *
+func_generator(const char *text, int state)
+{
+  static int list_index, list_index1, len;
+  char *name;
+  
+  if (!state) 
+    {
+      list_index = 0;
+      list_index1 = 0;
+      len = strlen(text);
+    }
+  
+  
+  while ((list_index < k->func->n)) 
+    {   
+      name = k->func->p[list_index++]->name;
+      if (strncmp(name, text, len) == 0) 
+	{
+	  return strdup(name);
+	}
+    }
+
+  while ((list_index1 < k->sym->n)) 
+    {   
+      name = k->sym->p[list_index1++]->name;
+      if (strncmp(name, text, len) == 0) 
+	{
+	  return strdup(name);
+	}
+    }
+  
+  return NULL;
+}
+
+char *
+label_generator(const char *text, int state)
+{
+  static int list_index, len;
+  char *name;
+  
+  if (!state) 
+    {
+      list_index = 0;
+      len = strlen(text);
+    }
+  
+  
+  while ((list_index < k->label->n)) 
+    {   
+      name = k->label->p[list_index++]->name;
+      if (strncmp(name, text, len) == 0) 
+	{
+	  return strdup(name);
+	}
+    }
+  
+  return NULL;
+}
+
+char *
+section_generator(const char *text, int state)
+{
+  static int list_index, len;
+  char *name;
+  
+  if (!state) 
+    {
+      list_index = 0;
+      len = strlen(text);
+    }
+  
+  
+  while ((list_index < k->sec->n)) 
+    {   
+      name = k->sec->p[list_index++]->name;
+      if (strncmp(name, text, len) == 0) 
+	{
+	  return strdup(name);
+	}
+    }
+  
+  return NULL;
+}
+
 
 char *
 cmd_generator(const char *text, int state)
@@ -521,11 +633,9 @@ cmd_generator(const char *text, int state)
 int
 main (int argc, char *argv[])
 {
-  STAN_CASE *c;
-  STAN_CORE *k;
 
 
-  printf ("STAN is a sTAtic aNalyser. v 0.4\n");
+  printf ("STAN is a sTAtic aNalyser. v 0.1\n");
   printf ("(c) pico\n\n");
   // TODO: Command-line args processing
 
@@ -545,7 +655,7 @@ main (int argc, char *argv[])
     }
 
   int flag = 0;
-  char *input;
+  char *input = NULL;
   rl_attempted_completion_function = cmd_completion;
   while (!flag)
     {

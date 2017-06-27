@@ -924,3 +924,13 @@ stan_core_del_comment (STAN_CORE *k, long addr)
 
   return 0;
 }
+STAN_SYM*     
+stan_core_get_closest_symbol (STAN_CORE *k, long addr)
+{
+  int i,n;
+  n = k->sym->n;
+  for (i = 0; i < n; i++)
+    if (k->sym->p[i]->addr > addr) 
+      return (i > 0 ? k->sym->p[i -1] : k->sym->p[0]);
+  return NULL;
+}

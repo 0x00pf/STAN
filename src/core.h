@@ -216,6 +216,7 @@ extern "C" {
   int           stan_comment_free (STAN_COMMENT *c);
   // Util FUnctions
   int           stan_core_ptr_segment (STAN_CORE *k, long addr);
+  STAN_SYM*     stan_core_get_closest_symbol (STAN_CORE *k, long addr);
 #ifdef __cplusplus
 }
 #endif

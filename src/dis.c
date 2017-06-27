@@ -617,7 +617,7 @@ stan_dis_check_ptr (STAN_CORE *k, long ptr)
 #define DUMP_WSIZE 8
 
 static int
-_dump_bytes (long addr, long len)
+_dump_bytes (long base, long addr, long len)
 {
   int  i;
   char *ascii;
@@ -625,12 +625,13 @@ _dump_bytes (long addr, long len)
   ascii = malloc (DUMP_SIZE + 1);
   memset (ascii, 0, DUMP_SIZE + 1);
   unsigned char *p = (unsigned char*)addr;
+  printf ("%p : ", (void*) (base));
   for (i = 0; i < len; i++)
     {
       if ((i > 0) & ((i % DUMP_SIZE) == 0)) 
 	{
 
-	  printf ("|%s\n", ascii);
+	  printf ("|%s\n%p : ", ascii, (void*)(base + i));
 	  memset (ascii, 0, DUMP_SIZE);
 	}
       printf ("%02x ", p[i]);
@@ -647,16 +648,29 @@ _dump_bytes (long addr, long len)
 }
 
 static int
-_dump_addresses (long addr, long len)
+_dump_addresses (STAN_CORE *k, long base, long addr, long len)
 {
-  int  i;
+  int      i;
+  STAN_SYM *s;
+  int      rel;
   long *p = (long *)addr;
 
+  // Find closest symbol
+
+  
   for (i = 0; i < len; i++)
     {
       // Resolve symbols!!
-      printf ("%p ", (void*) p[i]);
-      if (((i > 0) & ((i % DUMP_WSIZE) == 0))) printf ("\n");
+      s = stan_core_get_closest_symbol (k, p[i]);
+      printf ("%p: %p\t", (void*) base + i*sizeof(long), (void*) p[i]);
+      if (s)
+	{
+	  rel = p[i] - s->addr;
+	  if (rel > 0 && rel < 0x1000) // XXX: We have to actually checka against segment
+	    printf ("<%s %+d>", s->id, p[i] - s->addr);
+	}
+      printf ("\n");
+      //if (((i > 0) & ((i % DUMP_WSIZE) == 0))) printf ("\n");
     }
   printf ("\n");
   return 0;
@@ -683,8 +697,8 @@ stan_dis_dump_block (STAN_CORE *k, char *fmt, long addr, long len)
   // Calculate real address
   printf ("+ Dumping %ld items from segment '%s'\n", len, s->id);
   ptr = (long)(k->code + s->off + (addr - s->addr));
-  if (!strcmp (fmt, "x")) _dump_bytes (ptr, len);
-  else if (!strcmp (fmt, "p")) _dump_addresses (ptr, len);
+  if (!strcmp (fmt, "x")) _dump_bytes (addr, ptr, len);
+  else if (!strcmp (fmt, "p")) _dump_addresses (k, addr, ptr, len);
 
   return 0;
 }

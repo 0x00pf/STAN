@@ -1,4 +1,8 @@
 
+Tue Jun 27 22:54:13 CEST 2017
+	* Improved memory dumps
+	* Added labels and function autocompletion
+
 Sun Jun 25 18:42:16 CEST 2017
 	* Added help for commands accepting parameters and general help command
 	* Fixed some minor bugs

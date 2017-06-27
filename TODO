@@ -19,6 +19,10 @@ TODO
   - Deterine beginning and end
   - Cross reference info?
 * Process globals (Can be added as symbols) [PARTIAL]
+* Add patch command. Reload binary memory mapped and apply memory write commands
+* Cases
+  - Extend format to support execution of commands
+    - Example: Write memory
 
 DONE
 -------------------
