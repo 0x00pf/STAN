@@ -930,7 +930,10 @@ stan_core_get_closest_symbol (STAN_CORE *k, long addr)
   int i,n;
   n = k->sym->n;
   for (i = 0; i < n; i++)
-    if (k->sym->p[i]->addr > addr) 
-      return (i > 0 ? k->sym->p[i -1] : k->sym->p[0]);
+    if (k->sym->p[i]->addr >= addr) 
+      {
+	if (k->sym->p[i]->addr == addr) return k->sym->p[i];
+	return (i > 0 ? k->sym->p[i -1] : k->sym->p[0]);
+      }
   return NULL;
 }

@@ -19,7 +19,7 @@
 /* Code Analiser.... common code
  * ----------------------------------
  */
-#include <stdio.h>
+#include <stdio.h> 
 #include <string.h>
 #include <stdlib.h>
 
@@ -519,7 +519,10 @@ stan_dis_dump_mem (STAN_CORE *k, long addr)
   else // Binary data
     {
       char *p = buffer;
-      p += sprintf (p, "%p ", (int*)&c[0]);
+      STAN_SYM *s;
+      if ((s = (STAN_SYM*) stan_table_find (k->sym, *(long*)addr)) != NULL)
+	p += sprintf (p, "[<%s> %p]", s->id, (void*)(*(long*)addr));
+      //p += sprintf (p, "%p ", (int*)&c[0]);
     }
     
   return strdup (buffer);
@@ -666,8 +669,8 @@ _dump_addresses (STAN_CORE *k, long base, long addr, long len)
       if (s)
 	{
 	  rel = p[i] - s->addr;
-	  if (rel > 0 && rel < 0x1000) // XXX: We have to actually checka against segment
-	    printf ("<%s %+d>", s->id, p[i] - s->addr);
+	  if (rel >= 0 && rel < 0x1000) // XXX: We have to actually checka against segment
+	    printf ("<%s %+ld>", s->id, p[i] - s->addr);
 	}
       printf ("\n");
       //if (((i > 0) & ((i % DUMP_WSIZE) == 0))) printf ("\n");
