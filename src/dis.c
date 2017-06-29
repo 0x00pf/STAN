@@ -87,6 +87,10 @@ _stan_dis_op (STAN_CORE *k, STAN_SEGMENT *s, int i)
 			(void*)(eip + detail->x86.operands[j].mem.disp + ins->size)); 
 	    }
 #if 1
+	  else if (detail->x86.operands[j].mem.base == X86_REG_EBP)
+	    {
+	      printf (BG_RED "# {var_%lx}"RESET,-detail->x86.operands[j].mem.disp + 4); 
+	    }
 	  else 
 	    {
 	      aux = stan_dis_check_ptr (k, detail->x86.operands[j].mem.disp);
@@ -96,8 +100,8 @@ _stan_dis_op (STAN_CORE *k, STAN_SEGMENT *s, int i)
 		  free (aux);
 		  aux = NULL;
 		}
-
-	      /*	      
+	      
+	      /*
 	    printf ("; SEGMENT: %s BASE: %s Index:%s Scale:%d Disp:%d", 
 		    detail->x86.operands[j].mem.segment ==  X86_REG_INVALID ? "N/A" :
 		    cs_reg_name (k->handle, detail->x86.operands[j].mem.segment),
@@ -109,6 +113,7 @@ _stan_dis_op (STAN_CORE *k, STAN_SEGMENT *s, int i)
 		    detail->x86.operands[j].mem.disp
 		    );
 	      */
+	      
 	    }
 #endif
 	}

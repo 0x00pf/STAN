@@ -211,6 +211,7 @@ stan_ana_process_addr (STAN_CORE *k, long addr)
   if (!k) return -1;
   if (k->valid != STAN_CORE_VALID) return -1;
 
+  printf ("+ Analysing addres %p\n", addr);
   handle = k->handle;
   // FInd segment
   if ((i = stan_core_ptr_segment (k, addr)) < 0)
@@ -228,7 +229,8 @@ stan_ana_process_addr (STAN_CORE *k, long addr)
   addr1 = _stan_configure_arm (k, addr);
   rel = addr - s->addr;
   k->count = cs_disasm(handle, k->code + s->off + rel, 
-		       s->size, addr1, 0, &k->ins);
+		       s->size - rel, addr1, 0, &k->ins);
+		       //s->size, addr1, 0, &k->ins);
   printf ("  * Analysing %ld instructions at (%p)\n", k->count, (void*)addr1);
   // here we have got the code... now we can analyse it
   // whatever it is

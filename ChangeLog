@@ -1,4 +1,8 @@
 
+Thu Jun 29 19:08:47 CEST 2017
+	* Fixed bug disassembling from addr
+	* Going for local function var :)... it's gonna take a bit to get it ready :P
+
 Tue Jun 27 22:54:13 CEST 2017
 	* Improved memory dumps
 	* Added labels and function autocompletion

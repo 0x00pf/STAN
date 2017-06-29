@@ -255,7 +255,8 @@ stan_core_load (STAN_CORE *k, char *fname)
   if (!fname) return -1;
 
   printf ("+ Opening file '%s'\n", fname);
-  if ((k->fd = open (fname, O_RDWR)) < 0)
+  //if ((k->fd = open (fname, O_RDWR)) < 0)
+  if ((k->fd = open (fname, O_RDONLY)) < 0)
     {
       perror ("open");
       return -1;
@@ -301,7 +302,7 @@ stan_core_dump (STAN_CORE *k)
 {
   int   i;
 
-  printf ("+ Dumming Core\n");
+  printf ("+ Core Information\n");
   printf ("  - File         : %s\n", k->fname);
   printf ("  - Size         : %ld\n", k->size);
   printf ("  - Entry Point  : %lx\n", k->ep);
