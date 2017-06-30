@@ -31,11 +31,12 @@
 #include "ana.h"
 #include "dis.h" 
 
-#define COM_COL 35
-#define COM_COL1 COM_COL + 9
+#define COM_COL 42
+#define COM_COL1 COM_COL + 1
+//#define COM_COL1 COM_COL + 9
 //https://en.wikipedia.org/wiki/Box-drawing_character#Unicode
 #define COM_SEP  "\u2502"
-#define HLINE "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524"
+#define HLINE "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524"
 
 
 /* Mnemonic color table */
@@ -271,23 +272,25 @@ _stan_dis_inst (STAN_CORE *k, STAN_SEGMENT *s, int i)
     else printf ("   ");
 
   stan_printf (mnemonic_color[im->type], "\t%s", ins->mnemonic);
+  int ml = strlen (ins->mnemonic);
+  ml = (ml > 8 ? 16 : 8);
 
   if (im->type == STAN_IMETA_JMP && im->tlabel)
     {
-      spc = COM_COL - strlen (im->tlabel->id) - 2;
+      spc = COM_COL - strlen (im->tlabel->id) - 2 - ml;
       stan_printf (BG_RED2, "\t<%s>", im->tlabel->id);
       //printf ("\t\t\t\t");
     }
   else if (im->type == STAN_IMETA_CALL && im->tfunc)
     {
 
-      spc = COM_COL - strlen (im->tfunc->id) - 2;
+      spc = COM_COL - strlen (im->tfunc->id) - 2 - ml;
       stan_printf (BG_GREEN2, "\t<%s>", im->tfunc->id);
       //printf ("\t\t\t");
     }
   else
     {
-      spc = COM_COL - strlen (ins->op_str);
+      spc = COM_COL - strlen (ins->op_str) - ml;
       stan_printf(mnemonic_color[im->type], "\t%s", ins->op_str);
       //printf ("\t\t");
     }
