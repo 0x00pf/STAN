@@ -220,7 +220,11 @@ stan_case_load (STAN_CASE *c, char *fname)
 
 	    addr =strtol (saddr + 2, NULL, 16);
 	    printf ("-> LABEL: '%s' '%p'\n", name, (void*)addr);
-	    stan_core_rename_label_at (c->k, addr, name);
+	    if ((stan_core_rename_label_at (c->k, addr, name)) < 0)
+	      {
+		stan_core_def_label (c->k, name, addr);
+		printf ("- Label is NEW!\n");
+	      }
 	    break;
 
 	  }

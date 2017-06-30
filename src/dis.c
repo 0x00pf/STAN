@@ -31,6 +31,13 @@
 #include "ana.h"
 #include "dis.h" 
 
+#define COM_COL 35
+#define COM_COL1 COM_COL + 9
+//https://en.wikipedia.org/wiki/Box-drawing_character#Unicode
+#define COM_SEP  "\u2502"
+#define HLINE "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524"
+
+
 /* Mnemonic color table */
 char *mnemonic_color[] = {
   RESET,      // STAN_IMETA_NORMAL,
@@ -57,6 +64,7 @@ _stan_dis_op (STAN_CORE *k, STAN_SEGMENT *s, int i)
   cs_detail  *detail;
   int        n_ops = 0;
   char       *aux;
+  int        nl = 0;
 
   ins = &k->ins[i];
   eip = ins->address; // Current IP
@@ -75,30 +83,54 @@ _stan_dis_op (STAN_CORE *k, STAN_SEGMENT *s, int i)
 	{
 	  if (detail->x86.operands[j].mem.base == X86_REG_RIP)
 	    {
+	      nl = 1;
 	      aux = stan_dis_check_ptr (k, eip + detail->x86.operands[j].mem.disp + ins->size);
 	      if (aux) 
 		{
-		  printf ("# %s " RESET, aux);
+		  printf ("; %s " RESET, aux);
 		  free (aux);
 		  aux = NULL;
 		}
 	      else
-		printf (FG_GREEN "# ! %p " RESET, 
+		printf (FG_GREEN "; ! %p " RESET, 
 			(void*)(eip + detail->x86.operands[j].mem.disp + ins->size)); 
 	    }
-#if 1
-	  else if (detail->x86.operands[j].mem.base == X86_REG_EBP)
+	  else if (detail->x86.operands[j].mem.base == X86_REG_EBP ||
+		   detail->x86.operands[j].mem.base == X86_REG_RBP
+		   )
 	    {
-	      printf (BG_RED "# {var_%lx}"RESET,-detail->x86.operands[j].mem.disp + 4); 
+	      int a = 4;
+	      int b = detail->x86.operands[j].mem.disp % 4;
+	      nl = 1;
+	      //if (detail->x86.operands[j].mem.base == X86_REG_EBP) a = 4;
+	      if (detail->x86.operands[j].mem.disp < 0)
+		{
+		  if (b)
+		    printf ("; "BG_RED "{var_%ld.%d}"RESET,
+			    (-detail->x86.operands[j].mem.disp)/a, -b); 
+		  else
+		    printf ("; "BG_RED "{var_%ld}"RESET,(-detail->x86.operands[j].mem.disp)/a); 
+		}
+	      else
+		{
+		  if (b)
+		    printf ("; "BG_RED "{par_%ld.%d}"RESET,
+			    (detail->x86.operands[j].mem.disp)/a - 1, b); 
+		  else
+		    printf ("; "BG_RED "{par_%ld}"RESET,(detail->x86.operands[j].mem.disp)/a - 1); 
+		}
+
 	    }
 	  else 
 	    {
+
 	      aux = stan_dis_check_ptr (k, detail->x86.operands[j].mem.disp);
 	      if (aux) 
 		{
-		  printf ("# %s " RESET, aux);
+		  printf ("; %s " RESET, aux);
 		  free (aux);
 		  aux = NULL;
+		  nl = 1;
 		}
 	      
 	      /*
@@ -115,7 +147,7 @@ _stan_dis_op (STAN_CORE *k, STAN_SEGMENT *s, int i)
 	      */
 	      
 	    }
-#endif
+
 	}
 
 
@@ -132,15 +164,16 @@ _stan_dis_op (STAN_CORE *k, STAN_SEGMENT *s, int i)
 		k->ins[indx].bytes[1] << 8 |
 		k->ins[indx].bytes[0];
 	      aux = stan_dis_check_ptr (k, ptr);
+	      nl = 1;
 	      if (aux) 
 		{
-		  printf ("# [%p] %s " RESET, 
+		  printf ("; [%p] %s " RESET, 
 			  (void*)(eip + detail->arm.operands[j].mem.disp +  ins->size + 4), aux);
 		  free (aux);
 		  aux = NULL;
 		}
 	      else
-		printf (FG_GREEN "# !%p " RESET, 
+		printf (FG_GREEN "; !%p " RESET, 
 			(void*)(eip + detail->arm.operands[j].mem.disp+ ins->size + 4));
 	      
 	      
@@ -152,73 +185,84 @@ _stan_dis_op (STAN_CORE *k, STAN_SEGMENT *s, int i)
 	{
 	  
 	  if ((detail->x86.operands[j].imm < 255) && isprint ((int)(detail->x86.operands[j].imm & 0xff)))
-	    printf ("# "BG_LBLUE"'%c'" RESET, (unsigned char)detail->x86.operands[j].imm);
+	    printf ("; "BG_LBLUE"'%c'" RESET, (unsigned char)detail->x86.operands[j].imm);
 	  else
 	  
 	    {
 	      aux =stan_dis_check_ptr (k, detail->x86.operands[j].imm);
 	      if (aux) 
 		{
-		  printf ("# %s " RESET, aux);
+		  printf ("; %s " RESET, aux);
 		  free (aux);
 		  aux = NULL;
+		  nl = 1;
 		}
 	    }
 	}
       else if (k->arch == STAN_CORE_ARCH_ARM && 
 	       detail->arm.operands[j].type == ARM_OP_IMM)
 	{
-	  
+	  nl = 1;
 	  if ((detail->arm.operands[j].imm < 255) && isprint ((int)(detail->arm.operands[j].imm & 0xff)))
-	    printf ("# "BG_LBLUE"'%c'" RESET, (unsigned char)detail->arm.operands[j].imm);
+	    printf ("; "BG_LBLUE"'%c'" RESET, (unsigned char)detail->arm.operands[j].imm);
 	  else
-	  
 	    {
 	      aux =stan_dis_check_ptr (k, detail->arm.operands[j].imm);
 	      if (aux) 
 		{
-		  printf ("# %s " RESET, aux);
+		  printf ("; %s " RESET, aux);
 		  free (aux);
 		  aux = NULL;
 		}
+	      else nl = 0;
 	    }
 	}
 
     }
   
   
-  return 0;
+  return nl;
 }
 
 
 static int
 _stan_dis_inst (STAN_CORE *k, STAN_SEGMENT *s, int i)
 {
-  int  j;
+  int  j, spc;
   cs_insn *ins;
   STAN_IMETA *im;
   STAN_COMMENT *com;
   STAN_SYM   *l;
 
+  spc = 0;
   ins = &k->ins[i];
   im = &(k->imeta[i]);
   /* Processing single instruction */
   /* Check address */
-  if (im->addr || im->func)  printf ("\n");
+  //if (im->addr || im->func)    printf("\n");
+  //if (im->addr || im->func)    printf("%*s\n", 83, COM_SEP);
+  if (im->addr || im->func)    printf("%s\n", HLINE);
 
   if ((l = (STAN_SYM*) stan_table_find (k->label, ins->address)) != NULL)
-    stan_printf (BG_RED2, "%38s:\n", l->id);
+    {
+      stan_printf (BG_RED2, "%38s:", l->id);
+      printf("%*s\n", COM_COL1, COM_SEP);
+    }
   if (im->addr)
     {
       if (!strcmp (im->addr->id, "__entry_point"))
-	  stan_printf (BG_MAGENTA, "%38s:\n", im->addr->id);
+	stan_printf (BG_MAGENTA, "%38s:", im->addr->id);
       else if (!strcmp (im->addr->id, "_start"))
-	stan_printf (BG_MAGENTA, "%38s:\n", im->addr->id);
+	stan_printf (BG_MAGENTA, "%38s:", im->addr->id);
       else
-	stan_printf (BG_GREEN2, "%38s:\n", im->addr->id);
+	stan_printf (BG_GREEN2, "%38s:", im->addr->id);
+      printf("%*s\n", COM_COL1, COM_SEP);
     }
   else if ((l = (STAN_SYM*)stan_table_find (k->func, ins->address)) != NULL)
-    stan_printf (BG_GREEN2, "%38s:\n", l->id);
+    {
+      stan_printf (BG_GREEN2, "%38s:\n", l->id);
+      printf("%*s\n", COM_COL1, COM_SEP);
+    }
 
   
   printf("%"PRIx64":   ", ins->address); 
@@ -230,28 +274,38 @@ _stan_dis_inst (STAN_CORE *k, STAN_SEGMENT *s, int i)
 
   if (im->type == STAN_IMETA_JMP && im->tlabel)
     {
-      stan_printf (BG_RED2, "\t<%s>\t", im->tlabel->id);
-      printf ("\t\t");
+      spc = COM_COL - strlen (im->tlabel->id) - 2;
+      stan_printf (BG_RED2, "\t<%s>", im->tlabel->id);
+      //printf ("\t\t\t\t");
     }
   else if (im->type == STAN_IMETA_CALL && im->tfunc)
     {
-      stan_printf (BG_GREEN2, "\t<%s>\t", im->tfunc->id);
-      printf ("\t\t");
+
+      spc = COM_COL - strlen (im->tfunc->id) - 2;
+      stan_printf (BG_GREEN2, "\t<%s>", im->tfunc->id);
+      //printf ("\t\t\t");
     }
   else
     {
-      stan_printf(mnemonic_color[im->type], "\t%s\t", ins->op_str);
-      printf ("\t");
+      spc = COM_COL - strlen (ins->op_str);
+      stan_printf(mnemonic_color[im->type], "\t%s", ins->op_str);
+      //printf ("\t\t");
     }
-  // Resolve addresses
-  _stan_dis_op (k, s, i);
+  
+  printf("%*s", spc, COM_SEP);
 
-  printf (" \n");
+  // Resolve addresses
+  int nl =_stan_dis_op (k, s, i);
+
   if ((com = (STAN_COMMENT*) stan_table_find (k->comment, ins->address)) != NULL)
     {
-      if (com->comment) stan_printf (FG_LWHITE, "%41s %s\n" RESET, ";", com->comment);
+      if (com->comment) 
+	{
+	  if (nl) stan_printf (FG_LWHITE, "\n%41s %s" RESET, ";", com->comment);
+	  else stan_printf (FG_LWHITE, "%s %s" RESET, ";", com->comment);
+	}
     }
-
+  printf (" \n");
   return 0;
 }
 
@@ -501,7 +555,9 @@ stan_dis_dump_mem (STAN_CORE *k, long addr)
   memset (buffer, 0, 1024);
   if (addr == 0) return NULL;
   // Check if the first characters are printable
-  if (isprint (c[0]) && (isprint (c[1])) && (isprint (c[2]) || c[2]==0))
+  if ((isspace(c[0]) || isprint (c[0])) && 
+      (isspace(c[1]) || isprint (c[1])) && 
+      (isprint (c[2]) || c[2]==0 || isspace(c[2])))
     {
       j =0;
       buffer[j++] = '\'';
@@ -564,10 +620,10 @@ stan_dis_check_ptr (STAN_CORE *k, long ptr)
 	    {
 	      str = stan_dis_dump_mem (k, (long)(k->code + sec->off + rel));
 	      if (!s)
-		  snprintf (buffer, 1024, FG_BLUE " %lx(%s+%lx) " RESET " : " BG_RED "%s" RESET,
+		  snprintf (buffer, 1024, FG_BLUE "%lx(%s+%lx) " RESET " : " BG_RED "%s" RESET,
 			    ptr, sec->id, rel, str);
 	      else
-		  snprintf (buffer, 1024, FG_BLUE " <%s> %lx(%s+%lx) " RESET " : " BG_RED "%s" RESET,
+		  snprintf (buffer, 1024, FG_BLUE "<%s> %lx(%s+%lx) " RESET " : " BG_RED "%s" RESET,
 			    s->id, ptr, sec->id, rel, str);
 
 	      
@@ -587,7 +643,7 @@ stan_dis_check_ptr (STAN_CORE *k, long ptr)
 		}
 	      else // Otherwise also dump the symbol
 		{
-		  aux += snprintf (buffer, 1024, FG_GREEN " <%s> %lx(%s+0x%lx)" RESET,
+		  aux += snprintf (buffer, 1024, FG_GREEN "<%s> %lx(%s+0x%lx)" RESET,
 				   s->id, ptr, sec->id, rel);
 		}
 	      free (str);
@@ -633,6 +689,10 @@ _dump_bytes (long base, long addr, long len)
   ascii = malloc (DUMP_SIZE + 1);
   memset (ascii, 0, DUMP_SIZE + 1);
   unsigned char *p = (unsigned char*)addr;
+
+  printf ("          | 00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f |0123456789abcdef\n");
+  printf ("----------+-------------------------------------------------+----------------\n");
+
   printf ("%p : ", (void*) (base));
   for (i = 0; i < len; i++)
     {
@@ -662,6 +722,7 @@ _dump_addresses (STAN_CORE *k, long base, long addr, long len)
   STAN_SYM *s;
   int      rel;
   long *p = (long *)addr;
+  int *p1 = (int *)addr;
 
   // Find closest symbol
 
@@ -670,12 +731,21 @@ _dump_addresses (STAN_CORE *k, long base, long addr, long len)
     {
       // Resolve symbols!!
       s = stan_core_get_closest_symbol (k, p[i]);
-      printf ("%p: %p\t", (void*) base + i*sizeof(long), (void*) p[i]);
+      if (k->mode == STAN_CORE_MODE_64)
+	printf ("%p: %p\t", (void*) base + i*sizeof(long), (void*) p[i]);
+      else
+	printf ("%p: %p\t", (void*) base + i*sizeof(long), (void*) p1[i]);
       if (s)
 	{
 	  rel = p[i] - s->addr;
 	  if (rel >= 0 && rel < 0x1000) // XXX: We have to actually checka against segment
-	    printf ("<%s %+ld>", s->id, p[i] - s->addr);
+	    {
+	      if (k->mode == STAN_CORE_MODE_64)
+		printf ("<%s %+ld>", s->id, p[i] - s->addr);
+	      else
+		printf ("<%s %+d>", s->id, p1[i] - (int)s->addr);
+	    }
+	  
 	}
       printf ("\n");
       //if (((i > 0) & ((i % DUMP_WSIZE) == 0))) printf ("\n");
@@ -756,3 +826,57 @@ stan_dis_poke_block (STAN_CORE *k, char *fmt, long addr, char*str)
 
   return 0;
 }
+
+int
+stan_dis_generate_labels (STAN_CORE *k, char *prefix, long addr, long len)
+{
+  int      i, cnt;
+  STAN_SEGMENT   *s;
+  STAN_SYM *s1;
+  char     buffer[1024];
+  long           ptr;
+  long *p;
+  int *p1;
+
+  // Find closest symbol
+  if ((s = stan_core_find_func_section (k, addr)) == NULL)
+    {
+      fprintf (stderr, "- Cannot find code for address %p\n", (void*)addr);
+      return -1;
+    }
+  // Calculate real address
+  ptr = (long)(k->code + s->off + (addr - s->addr));
+  p = (long *)ptr; 
+  p1 = (int *)ptr;
+
+  cnt = 0;
+  for (i = 0; i < len; i++)
+    {
+      // Resolve symbols!!
+
+      //s1 = stan_core_get_closest_symbol (k, p[i]);
+      if (k->mode == STAN_CORE_MODE_64)
+	s1 = (STAN_SYM*) stan_table_find (k->label, p[i]);
+      else
+	s1 = (STAN_SYM*) stan_table_find (k->label, p1[i]);
+      if (s1) continue;  /// We skip this if we already have a symbol
+      // Otherwise we create a label
+      snprintf (buffer, 1024, "%s_%d", prefix, i);
+      if (k->mode == STAN_CORE_MODE_64)
+	{
+	  s1 = stan_core_add_label (k, p[i]);
+	}
+      else
+	{
+	  s1 = stan_core_add_label (k, p1[i]);
+	}
+      if (s1->id) free (s1->id);
+      s1->id = strdup (buffer);
+      s1->dump = 1;
+      cnt++;
+    }
+  printf ("+ %d labels generated\n", cnt);
+  printf ("\n");
+  return 0;
+}
+

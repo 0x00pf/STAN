@@ -58,6 +58,7 @@ static STAN_CMD cmd[] = {
   {"dis.addr", "Disassembles the indicated number of instruction starting from the specified address.Ex: dis.add addr count\n"},
   {"func.rename", "Renames a function. Ex: func.rename old_name new_name\n"},
   {"label.rename", "Renames a label. Ex: label.rename old_name new_name\n"},
+  {"label.gen_table", "Generates labels for memory table. Ex: label.gen_table prefix addr count\n"},
   {"comment.add", "Adds a comment to the specified addres. Ex: comment.add addr coment\n"},
   {"comment.del", "Deleted a comment at the specified addres. Ex: comment.del addr\n"},
   {"mem.dump", "Dumps memory. Ex: mem.dump [x|p] addr count.\n\t\t   fmt = x : dumps hex bytes\n\t\t   fmt = p : dumps pointers\n"},
@@ -406,6 +407,30 @@ run_cmd (STAN_CASE *c, char *buffer1)
       printf ("+ deleting comment at %p\n", (void *)addr);
       stan_core_del_comment (c->k, addr);
     }
+  else if (!strncasecmp (buffer, "label.gen_table", strlen ("label.gen_table")))
+    {
+      char fmt[1024];
+      long addr;
+      long len;
+      int  narg;
+
+      if (strlen(buffer) == strlen(cmd[cmd_indx].id))
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+
+      // FIXME:... what can I say... I'm feeling lazy
+      //       Just minimal functionality  
+      char *aux= buffer + strlen ("label.gen_table ");
+      if ((narg = sscanf (aux, "%s %p %ld", fmt, (void**) &addr, &len)) != 3)
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+      stan_dis_generate_labels (c->k, fmt, addr, len);
+    }
+
   else if (!strncasecmp (buffer, "mem.dump", strlen ("mem.dump")))
     {
       char fmt[1024];

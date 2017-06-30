@@ -799,6 +799,7 @@ stan_core_rename_label (STAN_CORE *k, char *name, char *name1)
   else
     {
       fprintf (stderr, "- DEBUG: Symbol '%s' not found\n", name);
+      return -1;
     }
 
   return 0;
@@ -828,6 +829,29 @@ stan_core_def_func (STAN_CORE *k, char *name, long addr)
   stan_table_sort (k->sym);
   return 0;
 }
+
+
+int           
+stan_core_def_label (STAN_CORE *k, char *name, long addr)
+{
+  STAN_SYM *s, *s1;
+
+
+  if (!k) return -1;
+  if (!name) return -1;
+
+  if ((s = (STAN_SYM*) stan_table_find_by_name (k->label, name)))
+    {
+      fprintf (stderr, "- Label '%s' already defined\n", name);
+      return -1;
+    }
+  s = stan_sym_new (name, addr);
+  s->dump = 1;
+  stan_table_add (k->label, (STAN_ITEM*) s);
+  stan_table_sort (k->label);
+  return 0;
+}
+
 
 int           
 stan_core_def_sym (STAN_CORE *k, char *name, long addr)

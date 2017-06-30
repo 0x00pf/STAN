@@ -38,6 +38,7 @@ extern "C" {
   char*  stan_dis_dump_mem (STAN_CORE *k, long addr);
   int    stan_dis_dump_block (STAN_CORE *k, char *fmt, long addr, long len);
   int    stan_dis_poke_block (STAN_CORE *k, char *fmt, long addr, char*str);
+  int    stan_dis_generate_labels (STAN_CORE *k, char *prefix, long addr, long len);
 #ifdef __cplusplus
 }
 #endif

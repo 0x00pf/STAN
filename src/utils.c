@@ -246,4 +246,3 @@ stan_printf (char *color, char* fmt, ...)
   return len;
 
 }
-

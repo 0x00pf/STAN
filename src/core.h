@@ -209,6 +209,7 @@ extern "C" {
   int           stan_core_rename_label (STAN_CORE *k, char *name, char *name1);
   int           stan_core_def_func (STAN_CORE *k, char *name, long addr);
   int           stan_core_def_sym (STAN_CORE *k, char *name, long addr);
+  int           stan_core_def_label (STAN_CORE *k, char *name, long addr);
   STAN_SEGMENT* stan_core_find_func_section (STAN_CORE *k, long addr);
 
   int           stan_core_add_comment (STAN_CORE *k, long addr, char *comment);
