@@ -87,6 +87,13 @@
  *  op[1] -> 
  */
 
+typedef struct stan_patch_t
+{
+  long          off;
+  int           len;
+  unsigned char *data;
+} STAN_PATCH;
+
 // This is also a STAN_ITEM object stored in tables
 typedef struct stan_comment_t
 {
@@ -149,6 +156,8 @@ typedef struct stan_core_t
   cs_insn    *ins;
   STAN_IMETA *imeta; // Stores instruction metadata... array of size count
   size_t     count;
+  STAN_PATCH *patch;
+  int        n_patch;
   // ------------------------------------------
   STAN_TABLE *seg;
   STAN_TABLE *sec;
@@ -218,6 +227,8 @@ extern "C" {
   // Util FUnctions
   int           stan_core_ptr_segment (STAN_CORE *k, long addr);
   STAN_SYM*     stan_core_get_closest_symbol (STAN_CORE *k, long addr);
+  // Patches
+  int           stan_core_add_patch (STAN_CORE *k, long off, int len, unsigned char*data);
 #ifdef __cplusplus
 }
 #endif

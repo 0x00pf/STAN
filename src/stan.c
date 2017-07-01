@@ -49,6 +49,7 @@ static STAN_CMD cmd[] = {
   {"core.functions", "Shows identified core functions\n"},
   {"core.labels", "Shows identified core labels\n"},
   {"core.load", "Loads a core (binary) and analyses it. Ex: core.load binary\n"},
+  {"core.save", "Saves current core image. Automatically stores a case file. If no filename is provided the orignal name + .PATCHED is used. Ex: core.save binary.patch\n"},
   {"core.ana", "Not yet implemented\n"},
   {"cfg.dump", "Shows current STAN configuration\n"},
   {"cfg.get", "Gets a configuration value. Ex: cfg.get cfg_val\n"},
@@ -67,7 +68,7 @@ static STAN_CMD cmd[] = {
   {"sym.def", "Defines a symbol at the specified address. Ex: sym.def symbol_name addr\n"},
   {"help.abi", "Shows current ABI for the loaded core\n"},
   {"help", "Shows command help\n"},
-   {"quit", "By STAN\n"},
+  {"quit", "By STAN\n"},
    {NULL, NULL}
 };
 
@@ -92,6 +93,12 @@ run_cmd (STAN_CASE *c, char *buffer1)
 
   while (buffer[i - 1] == ' ') i--;
   buffer[i] = 0;
+
+  if (buffer[0] == '!') 
+    {
+      system (buffer + 1);
+      return 0;
+    }
 
   cmd_indx = _find_cmd (buffer);
   if (i > 2 && cmd_indx < 0) 
@@ -190,6 +197,19 @@ run_cmd (STAN_CASE *c, char *buffer1)
       stan_core_identify (c->k);
       stan_ana_init (c->k);
     }
+  else if (!strncasecmp (buffer, "core.save", strlen ("core.save")))
+    {
+      if (strlen(buffer) == strlen(cmd[cmd_indx].id))
+	{
+	  // No parameter... let STAN chose a name
+	  stan_core_save (c->k, NULL);
+	}
+      else
+	stan_core_save (c->k, buffer + strlen ("core.save "));
+
+      stan_case_save (c, buffer + strlen ("core.save "), 0);
+    }
+
   else if (!strncasecmp (buffer, "dis.section", strlen ("dis.section")))
     {
       if (strlen(buffer) == strlen(cmd[cmd_indx].id))
@@ -491,7 +511,7 @@ run_cmd (STAN_CASE *c, char *buffer1)
 	   !strncasecmp (buffer, ":w", strlen (":w"))
 	   )
     {
-      stan_case_save (c, buffer + strlen ("case.save "));
+      stan_case_save (c, buffer + strlen ("case.save "), 1);
     }
 
   else if (!strncasecmp (buffer, "quit", strlen ("quit")) || 

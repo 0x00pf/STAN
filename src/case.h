@@ -47,7 +47,7 @@ extern "C" {
   int        stan_case_set_core            (STAN_CASE *c, STAN_CORE *k);
   int        stan_case_set_core_from_file  (STAN_CASE *c, char *fname);
   // For future implementation
-  int        stan_case_save                (STAN_CASE *c, char *fname);
+  int        stan_case_save                (STAN_CASE *c, char *fname, int patch);
   STAN_CASE *stan_case_load                (STAN_CASE *c, char *fname);
 
 #ifdef __cplusplus

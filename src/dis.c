@@ -31,12 +31,12 @@
 #include "ana.h"
 #include "dis.h" 
 
-#define COM_COL 42
+#define COM_COL 45
 #define COM_COL1 COM_COL + 1
 //#define COM_COL1 COM_COL + 9
 //https://en.wikipedia.org/wiki/Box-drawing_character#Unicode
 #define COM_SEP  "\u2502"
-#define HLINE "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524"
+#define HLINE "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524"
 
 
 /* Mnemonic color table */
@@ -751,7 +751,6 @@ _dump_addresses (STAN_CORE *k, long base, long addr, long len)
 	  
 	}
       printf ("\n");
-      //if (((i > 0) & ((i % DUMP_WSIZE) == 0))) printf ("\n");
     }
   printf ("\n");
   return 0;
@@ -784,24 +783,59 @@ stan_dis_dump_block (STAN_CORE *k, char *fmt, long addr, long len)
   return 0;
 }
 
-static int
-_poke_bytes (long addr, char *str)
+int
+stan_dis_poke_bytes (STAN_CORE *k, long addr, char *str)
 {
   int  i, l = strlen (str);
   char v, *p = str;
+  unsigned char *data;
   l >>= 1; 
+  data = malloc (l);
 
   v= 0;
+  printf ("Writting %d bytes\n", l);
   for (i = 0; i < l; i++)
     {
+      printf ("Byte %d\n", i);
       sscanf (p, "%02x", (unsigned int *) &v);
+      data[i] = v;
       printf ("Wrote %02x to %p\n", (unsigned char)v, (void*)((unsigned char*)addr + i));
       *(unsigned char*)((unsigned char*)addr + i) = (unsigned char) v;
 
       p+=2;
     }
+  stan_core_add_patch (k, addr - (long)k->code, l, data);
   return 0;
 }
+
+
+int
+stan_dis_poke_offset (STAN_CORE *k, long off, char *str)
+{
+  int  i, l = strlen (str);
+  char v, *p = str;
+  long addr = (long) k->code + off;
+  unsigned char *data;
+
+  l >>= 1; 
+  data = malloc (l);
+
+  v= 0;
+  printf ("Writting %d bytes\n", l);
+  for (i = 0; i < l; i++)
+    {
+      printf ("Byte %d\n", i);
+      sscanf (p, "%02x", (unsigned int *) &v);
+      data[i] = v;
+      printf ("Wrote %02x to %p\n", (unsigned char)v, (void*)((unsigned char*)addr + i));
+      *(unsigned char*)((unsigned char*)addr + i) = (unsigned char) v;
+
+      p+=2;
+    }
+  stan_core_add_patch (k, off, l, data);
+  return 0;
+}
+
 
 int
 stan_dis_poke_block (STAN_CORE *k, char *fmt, long addr, char*str)
@@ -823,7 +857,7 @@ stan_dis_poke_block (STAN_CORE *k, char *fmt, long addr, char*str)
   // Calculate real address
 
   ptr = (long)(k->code + s->off + (addr - s->addr));
-  if (!strcmp (fmt, "x")) _poke_bytes (ptr, str);
+  if (!strcmp (fmt, "x")) stan_dis_poke_bytes (k, ptr, str);
   else if (!strcmp (fmt, "s")) memcpy ((void*)ptr, (void*)str, strlen(str));
   else if (!strcmp (fmt, "p")) *((int *)ptr) = atoi (str);
 
@@ -856,8 +890,6 @@ stan_dis_generate_labels (STAN_CORE *k, char *prefix, long addr, long len)
   for (i = 0; i < len; i++)
     {
       // Resolve symbols!!
-
-      //s1 = stan_core_get_closest_symbol (k, p[i]);
       if (k->mode == STAN_CORE_MODE_64)
 	s1 = (STAN_SYM*) stan_table_find (k->label, p[i]);
       else

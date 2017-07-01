@@ -28,6 +28,7 @@
 
 #include "case.h"
 #include "core.h"
+#include "dis.h"
 #include "symb.h"
 #include "utils.h"
 
@@ -114,11 +115,11 @@ stan_case_set_core_from_file (STAN_CASE *c, char *fname)
 
 // For future implementation
 int
-stan_case_save (STAN_CASE *c, char *fname)
+stan_case_save (STAN_CASE *c, char *fname, int patch)
 {
-  FILE  *f;
-  int   i, n;
-  STAN_SYM *s;
+  FILE         *f;
+  int          i, j, n;
+  STAN_SYM     *s;
   STAN_COMMENT *com;
 
   char *fname1;
@@ -128,6 +129,7 @@ stan_case_save (STAN_CASE *c, char *fname)
   n = strlen (c->k->fname);
   fname1 = malloc (n + 6);
   sprintf (fname1, "%s.srep", c->k->fname);
+
   if ((f = fopen (fname1, "wt")) == NULL)
     {
       fprintf (stderr, "- Cannot save to file '%s'\n", fname1);
@@ -164,6 +166,19 @@ stan_case_save (STAN_CASE *c, char *fname)
     {
       com = (STAN_COMMENT*)c->k->comment->p[i];
       fprintf (f, "C:%p:%s\n", (void*)com->addr, com->comment);
+    }
+  if (patch)
+    {
+      // Dump Patches
+      n = c->k->n_patch;
+      printf ("+ Dumping %d patches\n", n);
+      for (i = 0; i < n; i++)
+	{
+	  fprintf (f, "P:%p:%d:", (void*)c->k->patch[i].off, c->k->patch[i].len);
+	  for (j = 0; j < c->k->patch[i].len; j++) fprintf (f,"%02x", c->k->patch[i].data[j]);
+	  fprintf (f, "\n");
+	}
+ 
     }
   fclose (f);
   printf ("+ Case successfully save '%s'\n", fname1);
@@ -258,6 +273,24 @@ stan_case_load (STAN_CASE *c, char *fname)
 	    break;
 
 	  }
+
+	case 'P':
+	  {
+	    char *hexstr, *soff, *slen;
+	    long off, len;
+
+	    soff = strtok (buffer + 2, ":");
+	    slen = strtok (NULL, ":");
+	    hexstr = strtok (NULL, ":");
+	    off = strtol (soff + 2, NULL, 16);
+	    len = atoi (slen);
+
+	    printf ("-> PATCH: %lx %ld '%s'\n", off, len, hexstr);
+	    stan_dis_poke_offset (c->k, off, hexstr);
+	    break;
+
+	  }
+
 
 	default:
 	  printf ("invalid field '%s'\n", buffer);

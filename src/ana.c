@@ -211,7 +211,7 @@ stan_ana_process_addr (STAN_CORE *k, long addr)
   if (!k) return -1;
   if (k->valid != STAN_CORE_VALID) return -1;
 
-  printf ("+ Analysing addres %p\n", addr);
+  printf ("+ Analysing addres %p\n", (void*) addr);
   handle = k->handle;
   // FInd segment
   if ((i = stan_core_ptr_segment (k, addr)) < 0)

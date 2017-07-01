@@ -29,6 +29,7 @@ This is the list of current available commands
 * __case.dump__. Dumps information about the current case/project
 * __case.save__. Saves the current case. It will save the status in a file named against the binary loaded with the extension .srep
 * __case.load__ `file.srep`. Loads a previously saved case. 
+* __case.save__ `file.`. Saves current core image (including patches) in a new file. Automatically creates a case file. If no name is provided the data is stored in 'original_core_file.PATCHED'. 
 * __core.info__. Dumps  information about the current binary being analysed
 * __core.symbol__. Dumps the symbols of the binary being analysed
 * __core.functions__. Dumps the sumbols that STAN belives are functions

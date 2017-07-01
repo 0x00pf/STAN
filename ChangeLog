@@ -1,4 +1,8 @@
 
+Sat Jul  1 19:14:52 CEST 2017
+	* Added memory patches to case file. (Save/Load)
+	* Added command to save patched core file
+
 Thu Jun 29 19:08:47 CEST 2017
 	* Fixed bug disassembling from addr
 	* Going for local function var :)... it's gonna take a bit to get it ready :P

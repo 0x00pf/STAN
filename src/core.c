@@ -186,6 +186,8 @@ stan_core_new ()
 int        
 stan_core_free (STAN_CORE *k)
 {
+  int   i;
+
   if (!k) return -1;
   if (k->fname) free (k->fname);
   if (k->fd >=0) close (k->fd);
@@ -200,6 +202,11 @@ stan_core_free (STAN_CORE *k)
   stan_table_free (k->func);
   stan_table_free (k->label);
   stan_table_free (k->comment);
+
+  // Free patches
+  for (i = 0; i < k->n_patch; i++)
+    if (k->patch[i].data) free (k->patch[i].data);
+  free (k->patch);
 
   free (k);
   return -1;
@@ -291,9 +298,37 @@ stan_core_load (STAN_CORE *k, char *fname)
 int        
 stan_core_save (STAN_CORE *k, char *fname)
 {
-  if (!k) return -1;
+  FILE *f;
+  char fname1[1024];
+  int  len, r;
 
-  fprintf (stderr, "%s: Function not yet implemented\n", __FUNCTION__);
+  if (!k) return -1;
+  if (!fname) 
+    snprintf (fname1, 1024, "%s.PATCHED", k->fname);
+  else
+    strcpy (fname1, fname);
+  if ((f = fopen (fname1, "wb")) == NULL)
+    {
+      fprintf (stderr, "- Cannot open file '%s'\n", fname1);
+      return -1;
+    }
+  len = k->size;
+  while (len > 0)
+    {
+      if ((r = fwrite (k->code, len, 1, f)) < 0)
+	{
+	  fprintf (stderr, "- Error writtig data (%d)\n", ferror (f));
+	  fclose (f);
+	  return -1;
+	}
+      len -=r;
+    }
+    
+  fclose (f);
+  fprintf (stderr, "+ Core set to '%s'\n", fname1);
+  if (k->fname) free (k->fname);
+  k->fname = strdup (fname1);
+  fprintf (stderr, "+ File '%s' successfully save\n", fname1);
   return -1;
 }
 
@@ -834,7 +869,7 @@ stan_core_def_func (STAN_CORE *k, char *name, long addr)
 int           
 stan_core_def_label (STAN_CORE *k, char *name, long addr)
 {
-  STAN_SYM *s, *s1;
+  STAN_SYM *s;
 
 
   if (!k) return -1;
@@ -957,8 +992,35 @@ stan_core_get_closest_symbol (STAN_CORE *k, long addr)
   for (i = 0; i < n; i++)
     if (k->sym->p[i]->addr >= addr) 
       {
-	if (k->sym->p[i]->addr == addr) return k->sym->p[i];
-	return (i > 0 ? k->sym->p[i -1] : k->sym->p[0]);
+	if (k->sym->p[i]->addr == addr) return (STAN_SYM*) k->sym->p[i];
+	return (i > 0 ? (STAN_SYM*) k->sym->p[i -1] : (STAN_SYM*) k->sym->p[0]);
       }
   return NULL;
+}
+
+int           
+stan_core_add_patch (STAN_CORE *k, long off, int len, unsigned char*data)
+{
+  int n;
+  STAN_PATCH *aux; 
+
+  if (!k) return -1;
+  if (off > k-> size || off < 0) return -1;
+  if (off + len > k->size) return -1;
+  if (!data) return -1;
+
+
+  n = k->n_patch;
+  if ((aux = realloc (k->patch, sizeof(STAN_PATCH) * (n + 1))) == NULL)
+    {
+      fprintf (stderr, "- Cannot allocate memory for patch\n");
+      return -1;
+    }
+  k->patch = aux;
+  k->patch[n].off = off;
+  k->patch[n].len = len;
+  k->patch[n].data = malloc (len);
+  memcpy (k->patch[n].data, data, len);
+  k->n_patch++;
+  return 0;
 }
