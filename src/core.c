@@ -346,9 +346,10 @@ stan_core_dump (STAN_CORE *k)
   //printf ("  - OS           : %s\n", stan_core_os_str[k->os]);
   printf ("  - Architecture : %s\n", stan_core_arch_str[k->arch]);
   printf ("  - Mode         : %s(%d)\n", stan_core_mode_str[k->mode], k->mode);
-  printf ("  - Info         : %s %s\n", IS_DYNAMIC(k) ? "Dynamic" : "Static",
-	  IS_STRIPPED(k) ? "Stripped" : "Not Stripped"
-	  );
+  if (k->type != STAN_CORE_TYPE_RAW)
+    printf ("  - Info         : %s %s\n", IS_DYNAMIC(k) ? "Dynamic" : "Static",
+	    IS_STRIPPED(k) ? "Stripped" : "Not Stripped"
+	    );
 
 
   // Dump Segments
@@ -465,6 +466,11 @@ stan_core_identify (STAN_CORE *k)
       printf ("- Trying to identify an invalid core\n");
       return -1;
     }
+  // TODO: For now we only support Linux
+  k->os = STAN_CORE_OS_LINUX;
+  k->arch = STAN_CORE_ARCH_X86;
+  k->mode = STAN_CORE_MODE_64;
+  k->type = STAN_CORE_TYPE_ELF_64;
 
   // Here we should call all the plug-ins... but we do not have
   // plug-ins yet... so lets put the ELF code just here :)
@@ -473,8 +479,25 @@ stan_core_identify (STAN_CORE *k)
   if (!(p[0] == 0x7f && p[1] == 0x45 && p[2] == 0x4c && p[3] == 0x46))
     {
       k->type = STAN_CORE_TYPE_RAW;
-      // For RAW we cannot do much.... the user has to set the 
-      // architecture and mode
+      k->ep = 0;
+      // Just create 1 raw segment
+      STAN_SEGMENT *seg, *c;
+
+      seg = stan_segment_new ();
+      seg->addr = 0;
+      seg->off = 0;
+      seg->size = k->size;
+      seg->type = STAN_SEGMENT_CODE; // .text
+
+      seg->id = strdup (".text");
+      stan_table_add (k->seg, (STAN_ITEM*)seg);
+      // Entry point symbol
+      STAN_SYM *ep = stan_sym_new ("__entry_point", 0);
+      ep->type= STAN_SYM_TYPE_FUNC;
+      stan_table_add (k->sym, (STAN_ITEM*)ep);
+      stan_table_sort (k->sym);
+
+
       return 0;
     }
   // Otherwise it is ELF and we process it
@@ -482,11 +505,6 @@ stan_core_identify (STAN_CORE *k)
   elf_hdr64 = (Elf64_Ehdr *) k->code;
   elf_hdr32 = (Elf32_Ehdr *) k->code;
 
-  // TODO: For now we only support Linux
-  k->os = STAN_CORE_OS_LINUX;
-  k->arch = STAN_CORE_ARCH_X86;
-  k->mode = STAN_CORE_MODE_64;
-  k->type = STAN_CORE_TYPE_ELF_64;
 
   k->core_init = stan_elf64_init;
   k->core_process = stan_elf64_process;
@@ -918,7 +936,7 @@ stan_core_find_func_section (STAN_CORE *k, long addr)
   STAN_SEGMENT  *sec;
 
   if (!k) return NULL;
-  if (!addr) return  NULL;
+  //if (!addr) return  NULL;
 
   n = k->sec->n;
   for (i = 0; i < n; i++)

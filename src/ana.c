@@ -40,7 +40,7 @@ static long
 _stan_configure_arm (STAN_CORE *k, long addr)
 {
   if (!k) return -1;
-  if (!addr) return -1;
+  //if (!addr) return -1;
   
   if (k->arch != STAN_CORE_ARCH_ARM) return addr;
   if (addr & 1)

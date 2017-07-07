@@ -266,7 +266,8 @@ _stan_dis_inst (STAN_CORE *k, STAN_SEGMENT *s, int i)
     }
 
   
-  printf("%"PRIx64":   ", ins->address); 
+  //printf("%"PRIx64":   ", ins->address); 
+  printf("%08x:   ", ins->address); 
   for (j = 0; j < 8; j++) 
     if (j < ins->size) printf ("%02x ", ins->bytes[j]); 
     else printf ("   ");

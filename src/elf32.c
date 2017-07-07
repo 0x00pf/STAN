@@ -157,14 +157,18 @@ stan_elf32_process_rela (STAN_CORE *k, Elf32_Shdr* s)
   STAN_SYM          *ssym;
 
   n_entries = s->sh_size / s->sh_entsize;
+  if (!k->dsym->p) return;
   for (i = 0; i < n_entries; i++)
     {
       rel = &((Elf32_Rel*)sh_reltab_p)[i];
       indx = ELF32_R_SYM(rel->r_info);
       
-      ssym = (STAN_SYM *) k->dsym->p[indx];
+
+
+	  ssym = (STAN_SYM *) k->dsym->p[indx];
  
-      ssym->addr = rel->r_offset;
+	  if (ssym) ssym->addr = rel->r_offset;
+
     }
 }
 
