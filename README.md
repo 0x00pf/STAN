@@ -23,7 +23,7 @@ STAN uses capstone (http://www.capstone-engine.org/) for its disassembling needs
 
 # Installation
 
-`./configure; make; make install` ... I guess :)
+`./configure; make; sudo make install` ... I guess :)
 
 # Commands
 
