@@ -14,6 +14,9 @@ It is in alpha phase and it may crash at any point... but it is usable for simpl
   - Shows data when it is printable
 * More to come
 
+And this is how it looks like
+
+![Alt text](/img/stan.png?raw=true "Stan in Action")
 
 # Dependencies
 STAN uses capstone (http://www.capstone-engine.org/) for its disassembling needs
