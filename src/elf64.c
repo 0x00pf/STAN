@@ -329,6 +329,12 @@ stan_elf64_init (STAN_CORE *k)
   stan_table_add (k->sym, (STAN_ITEM*)ep);
   stan_table_sort (k->sym);
 
+  STAN_SYM *aux = stan_sym_clone (ep);
+  stan_table_add (k->func, (STAN_ITEM*)aux);
+  stan_table_sort (k->func);
+
+
+
   return 0;
 }
 

@@ -19,7 +19,6 @@ TODO
   - Deterine beginning and end
   - Cross reference info?
 * Process globals (Can be added as symbols) [PARTIAL]
-* Add patch command. Reload binary memory mapped and apply memory write commands
 * Cases
   - Extend format to support execution of commands
     - Example: Write memory
@@ -28,4 +27,6 @@ DONE
 -------------------
 * Add user comments
 * Save/Load SREP files (STAN Reverse Engineering Projects :)
+* Add patch command. Reload binary memory mapped and apply memory write commands
+  [NOTE]... We are actually dumping a new file instead.
 

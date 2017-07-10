@@ -64,6 +64,7 @@ static STAN_CMD cmd[] = {
   {"comment.del", "Deleted a comment at the specified addres. Ex: comment.del addr\n"},
   {"mem.dump", "Dumps memory. Ex: mem.dump [x|p] addr count.\n\t\t   fmt = x : dumps hex bytes\n\t\t   fmt = p : dumps pointers\n"},
   {"mem.poke", "Writes to memory.Ex:   mem.poke [x|p] addr value.\n\t\t   fmt = x : writes hex string\n\t\t   fmt = p : Writes pointer\n"},
+  {"mem.xor", "Xors memory with a key.Ex:   mem.xor key addr1 addr2\n"},
   {"func.def", "Defines a function at the specified address. Ex: func.def function_name addr\n"},
   {"sym.def", "Defines a symbol at the specified address. Ex: sym.def symbol_name addr\n"},
   {"help.abi", "Shows current ABI for the loaded core\n"},
@@ -495,6 +496,29 @@ run_cmd (STAN_CASE *c, char *buffer1)
 	}
       stan_dis_poke_block (c->k, fmt, addr, str);
     }
+  else if (!strncasecmp (buffer, "mem.xor", strlen ("mem.xor")))
+    {
+      char fmt[1024];
+      char str[1024];
+      long addr, addr1;
+      int  narg;
+      if (strlen(buffer) == strlen(cmd[cmd_indx].id))
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+
+      // FIXME:... what can I say... I'm feeling lazy
+      //       Just minimal functionality  
+      char *aux= buffer + strlen ("mem.xor ");
+      if ((narg = sscanf (aux, "%s %p %p", str, (void**) &addr, (void**)  &addr1)) != 3)
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+      stan_mem_xor (c->k, str, addr, addr1);
+    }
+
   else if (!strncasecmp (buffer, "help", strlen ("help")))
     {
       int i;

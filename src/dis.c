@@ -681,6 +681,11 @@ stan_dis_check_ptr (STAN_CORE *k, long ptr)
   
 }
 
+
+/* ********************************************************
+ * **  TODO: Move all this to a memory manipulation module
+ */
+
 #define DUMP_SIZE 16
 #define DUMP_WSIZE 8
 
@@ -916,3 +921,43 @@ stan_dis_generate_labels (STAN_CORE *k, char *prefix, long addr, long len)
   return 0;
 }
 
+int
+stan_mem_xor (STAN_CORE *k, char *key, long addr, long addr1)
+{
+  STAN_SEGMENT *s;
+  long         ptr, ptr1, p;
+  int           l,v, i;
+  unsigned char *k1, c;
+
+  if ((s = stan_core_find_func_section (k, addr)) == NULL)
+    {
+      fprintf (stderr, "- Cannot find code for address %p\n", (void*)addr);
+      return -1;
+    }
+  ptr = (long)(k->code + s->off + (addr - s->addr));  
+
+  if ((s = stan_core_find_func_section (k, addr1)) == NULL)
+    {
+      fprintf (stderr, "- Cannot find code for address %p\n", (void*)addr1);
+      return -1;
+    }
+  ptr1 = (long)(k->code + s->off + (addr1 - s->addr));  
+  printf ("Key '%s' %d\n", key, strlen(key));
+  l = strlen (key) >> 1;
+  printf ("Key is %d bytes long... parsing\n", l);
+  k1 = malloc (l);
+  for (i = 0; i < l; i++)
+    {
+      sscanf (key, "%02x", &v);
+      k1[i] = (unsigned char)v;
+    }
+  
+  for (i=0, p = ptr; p < ptr1; p++, i++)
+    {
+      c = *((unsigned char*)p);
+      //printf ("Writing at %p: %d -> %d\n", p, c, c ^k1[i%l]);
+      
+      *((unsigned char*)p) = c ^ k1[i % l];
+    }
+
+}

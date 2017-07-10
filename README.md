@@ -49,6 +49,7 @@ This is the list of current available commands
 * __comment.del__ `address`. Deletes a comment associated to a given address
 * __mem.dump__ `fmt` `address` `count`. Dumps `count` items from memory at `address`. Valid formats are `x` for hex bytes and `p` for pointers... more to come
 * __mem.poke__ `fmt` `address` `string`. Writes the specified string at address `addr`. Valid formats are `x` for hex bytes. 
+* __mem.xor__ `key` `address1` `address2`. Xor encodes from `address1` to `address2` using `key`.
 * __sym.def__ `sym_name` `address`. Defines a generic symbol at `address`
 * __help__. Shows help
 * __help.abi__. Shows the function calling convention for the binary being analysed

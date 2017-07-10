@@ -166,6 +166,47 @@ stan_ana_process_current_code (STAN_CORE *k)
   return 0;
 }
 
+
+int
+stan_ana_process_ep (STAN_CORE *k)
+{
+  STAN_IMETA    *imeta;
+  int           i;
+
+
+  if (k->arch != STAN_CORE_ARCH_X86) return 0;
+  if (k->mode != STAN_CORE_MODE_64) return 0;
+#if 0
+  imeta = k->imeta;
+  if (k->count > 0)
+    {
+      /* Add functions and labels */
+      size_t j;
+      cs_insn *ins;
+     
+      /* Preliminary opcode analysis */
+      
+
+      for (j = 0; j < k->count; j++) 
+	{
+	  cs_detail *detail = k->ins[j].detail;
+
+	  ins = &k->ins[j];
+	}
+    }
+  else
+    {
+      printf ("Error disassembling\n");
+      k->count = 0;
+    }
+
+  stan_table_sort (k->func);
+  stan_table_sort (k->label);
+#endif
+  return 0;
+}
+
+
 long
 stan_ana_process_section ( STAN_CORE *k, STAN_SEGMENT *s)
 {
@@ -326,6 +367,10 @@ stan_ana_init (STAN_CORE *k)
       printf ("+ Processing section [%d] '%s'\n", i, c->id);
       stan_ana_process_section (k, c);
     }
+
+  // Process entry point
+  stan_ana_process_addr (k, k->ep);
+  stan_ana_process_ep (k);
 
   stan_table_sort (k->func);
   stan_table_sort (k->label);
