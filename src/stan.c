@@ -29,6 +29,8 @@
 #include "utils.h"
 #include "symb.h"
 
+#include "../config.h"
+
 static  STAN_CASE *c = NULL;
 static  STAN_CORE *k = NULL;
 
@@ -704,7 +706,7 @@ main (int argc, char *argv[])
 {
 
 
-  printf ("STAN is a sTAtic aNalyser. v 0.1\n");
+  printf ("STAN is a sTAtic aNalyser. v " VERSION "\n");
   printf ("(c) pico\n\n");
   // TODO: Command-line args processing
 
