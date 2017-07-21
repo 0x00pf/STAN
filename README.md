@@ -19,11 +19,11 @@ And this is how it looks like
 ![Alt text](/img/stan.png?raw=true "Stan in Action")
 
 # Dependencies
-STAN uses capstone (http://www.capstone-engine.org/) for its disassembling needs
+STAN uses capstone (http://www.capstone-engine.org/) for its disassembling needs.
 
 # Installation
 
-`./configure; make; sudo make install` ... I guess :)
+`./configure && make && sudo make install`
 
 # Commands
 
