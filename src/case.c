@@ -202,7 +202,6 @@ stan_case_load (STAN_CASE *c, char *fname)
       if (!fgets (buffer, 1024, f)) break;
       if (buffer[strlen(buffer) - 1] == '\n') 
 	buffer[strlen(buffer) - 1] = 0;
-      //printf ("Read: '%s'\n", buffer);
       switch (buffer[0])
 	{
 	case 'S':

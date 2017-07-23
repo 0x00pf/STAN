@@ -163,12 +163,9 @@ stan_elf32_process_rela (STAN_CORE *k, Elf32_Shdr* s)
       rel = &((Elf32_Rel*)sh_reltab_p)[i];
       indx = ELF32_R_SYM(rel->r_info);
       
-
-
-	  ssym = (STAN_SYM *) k->dsym->p[indx];
- 
-	  if (ssym) ssym->addr = rel->r_offset;
-
+      ssym = (STAN_SYM *) k->dsym->p[indx];
+      if (ssym) ssym->addr = rel->r_offset;
+      
     }
 }
 
@@ -190,7 +187,6 @@ stan_elf32_process_sections (STAN_CORE *k)
   shdr = (Elf32_Shdr *)(k->code + elf_hdr->e_shoff);
   sh_strtab = &shdr[elf_hdr->e_shstrndx];
   sh_strtab_p = k->code + sh_strtab->sh_offset;
-
    
   for (i = 0; i < elf_hdr->e_shnum; i++)
     {
@@ -208,7 +204,7 @@ stan_elf32_process_sections (STAN_CORE *k)
 	  sec->addr = shdr[i].sh_addr;
 	  sec->off = shdr[i].sh_offset;
 	  sec->size = shdr[i].sh_size;
-	  //sec->esize = shdr[i].sh_entsize;
+	  //sec->esize = shdr[i].sh_entsize; //XXX: Process this
 	  sec->esize = elf_hdr->e_shentsize;
 
 	  // Store Section
@@ -219,7 +215,6 @@ stan_elf32_process_sections (STAN_CORE *k)
 	  stan_table_add (k->sym, (STAN_ITEM*) ssym);
 	  _n_sec++;
 	}
-
       else if (shdr[i].sh_type == SHT_SYMTAB)
 	{
 	  stan_elf32_process_symtab (k, &shdr[i]);
@@ -251,7 +246,6 @@ stan_elf32_process_sections (STAN_CORE *k)
 		     sec->id, k1);
 
 	     int j;
-
 	     for (j = 0; j < k1; j++)
 	       {
 		 long ptr = (long)((unsigned char*)k->code + sec->off + j*sec->esize);
@@ -279,14 +273,14 @@ stan_elf32_process_sections (STAN_CORE *k)
 		     sec->id, k1);
 	     
 	     int j;
-
+	     
 	     for (j = 0; j < k1; j++)
 	       {
 		 long ptr = (long)((unsigned char*)k->code + sec->off + j*sec->esize);
 		 long plt_ptr = (long)(*((int *)ptr) - 6);
-				 long got_ptr = (long)((unsigned char*)sec->addr + j*sec->esize);
-
-				 STAN_SYM* ssym = (STAN_SYM*) stan_table_find (k->dsym, got_ptr);
+		 long got_ptr = (long)((unsigned char*)sec->addr + j*sec->esize);
+		 
+		 STAN_SYM* ssym = (STAN_SYM*) stan_table_find (k->dsym, got_ptr);
 		 STAN_SYM* ssym1;
 		 if (ssym) 
 		   {
@@ -294,7 +288,6 @@ stan_elf32_process_sections (STAN_CORE *k)
 		     ssym1->addr = plt_ptr;
 		     stan_table_add (k->sym, (STAN_ITEM*) ssym1);
 		   }
-		
 	       }
 	   }
 	 

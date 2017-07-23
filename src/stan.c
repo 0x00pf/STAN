@@ -584,6 +584,8 @@ run_cmd (STAN_CASE *c, char *buffer1)
   return 0;
 }
 
+
+// Readline support
 char **cmd_completion(const char *text, int start, int end);
 char *cmd_generator(const char *text, int state);
 char *func_generator(const char *text, int state);
@@ -722,10 +724,10 @@ cmd_generator(const char *text, int state)
     if (strncmp(name, text, len) == 0) {
       return strdup(name);
     }
-
+    
   }
   
-    return NULL;
+  return NULL;
 }
 
 

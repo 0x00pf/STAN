@@ -262,22 +262,12 @@ stan_core_load (STAN_CORE *k, char *fname)
   if (!fname) return -1;
 
   printf ("+ Opening file '%s'\n", fname);
-  //if ((k->fd = open (fname, O_RDWR)) < 0)
   if ((k->fd = open (fname, O_RDONLY)) < 0)
     {
       perror ("open");
       return -1;
     }
   k->size = stan_util_get_file_size (k->fd);
-  /*
-    // XXX: Keep for the patching function. To Be Implemented
-  if ((k->code = mmap (NULL, k->size, PROT_READ, //| PROT_WRITE,
-		       MAP_SHARED, k->fd, 0)) == MAP_FAILED)
-    {
-      perror ("mmap:");
-      exit (1);
-    } 
-  */
   k->code = malloc (k->size);
   l = read (k->fd, k->code, k->size);
   if (l < k->size)
@@ -936,7 +926,6 @@ stan_core_find_func_section (STAN_CORE *k, long addr)
   STAN_SEGMENT  *sec;
 
   if (!k) return NULL;
-  //if (!addr) return  NULL;
 
   n = k->sec->n;
   for (i = 0; i < n; i++)

@@ -116,19 +116,7 @@ stan_elf64_process_symtab (STAN_CORE *k, Elf64_Shdr* s)
 	      stan_table_add (k->func, (STAN_ITEM*)f);
 	    }
 
-#if 0
-	  int seg = stan_core_ptr_segment (k, symbol->st_value);
-	  
-	  //if (strlen (sname) > 1)
-	  if (seg >=0 && ((STAN_SEGMENT*)(k->seg->p[seg]))->type == STAN_SEGMENT_CODE)
-	    {
-	      STAN_SYM *f = stan_sym_clone (ssym);
-	      stan_table_add (k->func, (STAN_ITEM*)f);
-	    }
-#endif
-
 	}
-      //printf ("*************************\n");
     }
 }
 
@@ -184,7 +172,6 @@ stan_elf64_process_rela (STAN_CORE *k, Elf64_Shdr* s)
       indx = ELF64_R_SYM(rel->r_info);
       
       ssym = (STAN_SYM *) k->dsym->p[indx];
- 
       ssym->addr = rel->r_offset;
     }
 }
@@ -225,7 +212,7 @@ stan_elf64_process_sections (STAN_CORE *k)
 	  sec->addr = shdr[i].sh_addr;
 	  sec->off = shdr[i].sh_offset;
 	  sec->size = shdr[i].sh_size;
-	  //sec->esize = shdr[i].sh_entsize;
+	  //sec->esize = shdr[i].sh_entsize;  // XXX: We will have to process this
 	  sec->esize = elf_hdr->e_shentsize;
 
 	  // Store Section
@@ -237,7 +224,6 @@ stan_elf64_process_sections (STAN_CORE *k)
 	  stan_table_add (k->sym, (STAN_ITEM*) ssym);
 	  _n_sec++;
 	}
-
       else if (shdr[i].sh_type == SHT_SYMTAB)
 	{
 	  stan_elf64_process_symtab (k, &shdr[i]);
@@ -252,7 +238,6 @@ stan_elf64_process_sections (STAN_CORE *k)
 	{
 	  stan_elf64_process_rela (k, &shdr[i]);
 	}      
-
     }
 
   // process GOT.PLT
@@ -266,7 +251,6 @@ stan_elf64_process_sections (STAN_CORE *k)
 		  sec->id, k1);
 
 	  int j;
-
 	  for (j = 0; j < k1; j++)
 	    {
 	      long ptr = (long)(((unsigned char*)k->code + sec->off + j*sec->esize));
@@ -290,7 +274,6 @@ stan_elf64_process_sections (STAN_CORE *k)
 		  sec->id, k1);
 
 	  int j;
-
 	  for (j = 0; j < k1; j++)
 	    {
 	      long ptr = (long)(((unsigned char*)k->code + sec->off + j*sec->esize));

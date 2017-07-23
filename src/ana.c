@@ -40,7 +40,6 @@ static long
 _stan_configure_arm (STAN_CORE *k, long addr)
 {
   if (!k) return -1;
-  //if (!addr) return -1;
   
   if (k->arch != STAN_CORE_ARCH_ARM) return addr;
   if (addr & 1)
@@ -185,8 +184,6 @@ stan_ana_process_ep (STAN_CORE *k)
       cs_insn *ins;
      
       /* Preliminary opcode analysis */
-      
-
       for (j = 0; j < k->count; j++) 
 	{
 	  cs_detail *detail = k->ins[j].detail;
@@ -271,7 +268,6 @@ stan_ana_process_addr (STAN_CORE *k, long addr)
   rel = addr - s->addr;
   k->count = cs_disasm(handle, k->code + s->off + rel, 
 		       s->size - rel, addr1, 0, &k->ins);
-		       //s->size, addr1, 0, &k->ins);
   printf ("  * Analysing %ld instructions at (%p)\n", k->count, (void*)addr1);
   // here we have got the code... now we can analyse it
   // whatever it is
@@ -297,7 +293,6 @@ stan_ana_init_dis (STAN_CORE *k)
     }
 
   // Check config
-
   if ((val = stan_cfg_get ("syntax")))
     if (strncasecmp (val, "intel", 5))
 	syntax = CS_OPT_SYNTAX_ATT;
