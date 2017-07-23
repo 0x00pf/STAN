@@ -1,4 +1,11 @@
 
+Sun Jul 23 10:19:12 CEST 2017
+	* Minor fixes... getting there with file parsing
+	* Preliminary Support for RAW binaries
+	* Comands to define regions of a program to work on set.range dis.range
+	* More functions to manipulate memory
+	* Patching. Patch can be stored on cases and applied to binaries
+
 Sat Jul  1 19:14:52 CEST 2017
 	* Added memory patches to case file. (Save/Load)
 	* Added command to save patched core file

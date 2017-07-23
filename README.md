@@ -41,6 +41,8 @@ This is the list of current available commands
 * __dis.section__ `section_name`. Disassembles a whole section
 * __dis.function__ `function_name`. Disassembles a function. You can define functions using `func.def` in case the analysis failed.
 * __dis.addr__ `addr icount`. Disassembles `iconunt` instructions from the specified address.
+* __dis.range__. Disassembles the current defined working range. See __set.range__ for detauls.
+* __set.range__ `addt icount`. Defines a starting addres and a instruction count to be disassembled using __dis.range__ as a way to easily work on a region of a program
 * __func.rename__ `old_function_name` `new_function_name`. Renames a function
 * __func.def__ `func_name` `address`. Tells STAN that there is a function at `address`
 * __label.rename__ `old_label_name` `new_label_name`. Renames a lable

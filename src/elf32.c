@@ -208,7 +208,8 @@ stan_elf32_process_sections (STAN_CORE *k)
 	  sec->addr = shdr[i].sh_addr;
 	  sec->off = shdr[i].sh_offset;
 	  sec->size = shdr[i].sh_size;
-	  sec->esize = shdr[i].sh_entsize;
+	  //sec->esize = shdr[i].sh_entsize;
+	  sec->esize = elf_hdr->e_shentsize;
 
 	  // Store Section
 	  stan_table_add (k->sec, (STAN_ITEM*)sec);

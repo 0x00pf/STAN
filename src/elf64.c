@@ -103,12 +103,31 @@ stan_elf64_process_symtab (STAN_CORE *k, Elf64_Shdr* s)
       else
 	sname = "NONAME";
 
-      //printf ("** ELF_Symtab Adding Symbol to table (%s,%p)\n", sname, symbol->st_value);
+      printf ("** ELF_Symtab Adding Symbol to table (%s,%p)\n", sname, symbol->st_value);
       ssym = stan_sym_new (sname, symbol->st_value);
       stan_table_add (k->sym, (STAN_ITEM*)ssym);
 
       if (ELF64_ST_TYPE(symbol->st_info) == STT_FUNC) 
-	stan_sym_add_type (ssym, STAN_SYM_TYPE_FUNC); 
+	{
+	  stan_sym_add_type (ssym, STAN_SYM_TYPE_FUNC); 
+	  if (symbol->st_value)
+	    {
+	      STAN_SYM *f = stan_sym_clone (ssym);
+	      stan_table_add (k->func, (STAN_ITEM*)f);
+	    }
+
+#if 0
+	  int seg = stan_core_ptr_segment (k, symbol->st_value);
+	  
+	  //if (strlen (sname) > 1)
+	  if (seg >=0 && ((STAN_SEGMENT*)(k->seg->p[seg]))->type == STAN_SEGMENT_CODE)
+	    {
+	      STAN_SYM *f = stan_sym_clone (ssym);
+	      stan_table_add (k->func, (STAN_ITEM*)f);
+	    }
+#endif
+
+	}
       //printf ("*************************\n");
     }
 }
@@ -206,7 +225,8 @@ stan_elf64_process_sections (STAN_CORE *k)
 	  sec->addr = shdr[i].sh_addr;
 	  sec->off = shdr[i].sh_offset;
 	  sec->size = shdr[i].sh_size;
-	  sec->esize = shdr[i].sh_entsize;
+	  //sec->esize = shdr[i].sh_entsize;
+	  sec->esize = elf_hdr->e_shentsize;
 
 	  // Store Section
 

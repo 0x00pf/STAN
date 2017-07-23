@@ -97,6 +97,7 @@ _stan_dis_op (STAN_CORE *k, STAN_SEGMENT *s, int i)
 			(void*)(eip + detail->x86.operands[j].mem.disp + ins->size)); 
 	    }
 	  else if (detail->x86.operands[j].mem.base == X86_REG_EBP ||
+		   detail->x86.operands[j].mem.base == X86_REG_ESP ||
 		   detail->x86.operands[j].mem.base == X86_REG_RBP
 		   )
 	    {

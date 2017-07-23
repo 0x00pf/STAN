@@ -34,6 +34,8 @@
 static  STAN_CASE *c = NULL;
 static  STAN_CORE *k = NULL;
 
+static long range_addr = 0;
+static int  range_count = -1;
 
 typedef struct stan_cmd_t
 {
@@ -56,6 +58,8 @@ static STAN_CMD cmd[] = {
   {"cfg.dump", "Shows current STAN configuration\n"},
   {"cfg.get", "Gets a configuration value. Ex: cfg.get cfg_val\n"},
   {"cfg.set", "Sets a configuration value.Ex: cfg.set cfg_val val\n"},
+  {"set.range", "Set current disassemble range.Ex set.range addr val\n"},
+  {"dis.range", "Disassembles current range.\n"},
   {"dis.section", "Disassembles the specified section. Ex: dis.section section_name\n"},
   {"dis.function", "Disassembles the specified function. Ex: dis.function function_name\n"},
   {"dis.addr", "Disassembles the indicated number of instruction starting from the specified address.Ex: dis.add addr count\n"},
@@ -251,6 +255,30 @@ run_cmd (STAN_CASE *c, char *buffer1)
 	}
 
       stan_dis_addr (c->k, addr, count);
+    }
+  else if (!strncasecmp (buffer, "dis.range", strlen ("dis.range")))
+    {
+      stan_dis_addr (c->k, range_addr, range_count);
+    }
+  else if (!strncasecmp (buffer, "set.range", strlen ("set.range")))
+    {
+      long addr;
+      int  count, nargs;
+      if (strlen(buffer) == strlen(cmd[cmd_indx].id))
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+
+      nargs = sscanf (buffer + strlen ("set.range "), "%p %d", (void**)&addr, &count);
+      if (nargs != 2)
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+
+      range_addr = addr;
+      range_count = count;
     }
 
   else if (!strncasecmp (buffer, "cfg.dump", strlen ("cfg.dump")))

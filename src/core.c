@@ -636,7 +636,7 @@ _stan_core_dump_sym_table (STAN_CORE *k, STAN_TABLE *t)
   for (i = 0; i < t->n; i++)
     {
       s = (STAN_SYM*) t->p[i];
-      printf ("%p\t\t%s\n", (void*) s->addr, s->id);
+      printf ("%p\t\t(%s)\n", (void*) s->addr, s->id);
     }
   return 0;
 }
