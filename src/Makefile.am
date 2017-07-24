@@ -17,8 +17,8 @@
 bin_PROGRAMS=stan
 
 stanincludedir  = $(includedir)/stan
-staninclude_HEADERS=case.h core.h utils.h symb.h dis.h ana.h elf32.h elf64.h cfg.h
-EXTRA_DIST=case.h core.h utils.h symb.h dis.h ana.h elf32.h elf64.h cfg.h
+staninclude_HEADERS=case.h core.h utils.h symb.h dis.h ana.h elf32.h elf64.h func.h cfg.h
+EXTRA_DIST=case.h core.h utils.h symb.h dis.h ana.h elf32.h elf64.h func.h cfg.h
 
 stan_SOURCES=stan.c
 #stan_CFLAGS=${CFLAGS} -Wall -O0 -std=c99 -D_GNU_SOURCE=1
@@ -27,7 +27,7 @@ stan_LDADD=-lcapstone -lreadline libstan.la
 
 lib_LTLIBRARIES=libstan.la
 libstan_la_SOURCES=case.c core.c utils.c symb.c elf64.c elf32.c \
-		   ana.c dis.c cfg.c
+		   ana.c dis.c func.c cfg.c
 #libstan_la_CFLAGS=${MY_CFLAGS}
 #libstan_la_CFLAGS=${CFLAGS} -Wall -O0 -std=c99 -D_GNU_SOURCE=1
 

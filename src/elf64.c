@@ -102,8 +102,12 @@ stan_elf64_process_symtab (STAN_CORE *k, Elf64_Shdr* s)
 	sname = (char*) (sh_strtab_p + symbol->st_name);
       else
 	sname = "NONAME";
-
-      printf ("** ELF_Symtab Adding Symbol to table (%s,%p)\n", sname, symbol->st_value);
+#ifdef DEBUG
+      printf ("** ELF_Symtab Adding Symbol to table (%s,%p) %c\n", 
+	      sname, symbol->st_value, 
+	      (ELF64_ST_TYPE(symbol->st_info) == STT_FUNC) ? 'F' : 'D'
+	      );
+#endif
       ssym = stan_sym_new (sname, symbol->st_value);
       stan_table_add (k->sym, (STAN_ITEM*)ssym);
 
@@ -146,7 +150,9 @@ stan_elf64_process_dynsymtab (STAN_CORE *k, Elf64_Shdr* s)
 	snprintf (buffer, 1024, "%s@plt", (char*) (sh_strtab_p + symbol->st_name));
       else
 	strcpy (buffer, "NONAME");
-
+#ifdef DEBUG
+      printf ("** ELF_DynSymTab add dynamic symbol [%d] %s\n", i, buffer);
+#endif
       ssym = stan_sym_new (buffer, symbol->st_value);
       stan_table_add_dups (k->dsym, (STAN_ITEM*)ssym);
     }
@@ -170,7 +176,9 @@ stan_elf64_process_rela (STAN_CORE *k, Elf64_Shdr* s)
     {
       rel = &((Elf64_Rela*)sh_reltab_p)[i];
       indx = ELF64_R_SYM(rel->r_info);
-      
+#ifdef DEBUG      
+      printf ("** Rela.... [%d] %p, %d\n", i, rel->r_offset, indx);
+#endif
       ssym = (STAN_SYM *) k->dsym->p[indx];
       ssym->addr = rel->r_offset;
     }
@@ -212,8 +220,8 @@ stan_elf64_process_sections (STAN_CORE *k)
 	  sec->addr = shdr[i].sh_addr;
 	  sec->off = shdr[i].sh_offset;
 	  sec->size = shdr[i].sh_size;
-	  //sec->esize = shdr[i].sh_entsize;  // XXX: We will have to process this
-	  sec->esize = elf_hdr->e_shentsize;
+	  sec->esize = shdr[i].sh_entsize;  // XXX: We will have to process this
+	  if (sec->esize == 0) sec->esize = elf_hdr->e_shentsize;
 
 	  // Store Section
 

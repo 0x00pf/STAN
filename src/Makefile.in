@@ -143,7 +143,7 @@ am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(bindir)" \
 LTLIBRARIES = $(lib_LTLIBRARIES)
 libstan_la_LIBADD =
 am_libstan_la_OBJECTS = case.lo core.lo utils.lo symb.lo elf64.lo \
-	elf32.lo ana.lo dis.lo cfg.lo
+	elf32.lo ana.lo dis.lo func.lo cfg.lo
 libstan_la_OBJECTS = $(am_libstan_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -330,15 +330,15 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 stanincludedir = $(includedir)/stan
-staninclude_HEADERS = case.h core.h utils.h symb.h dis.h ana.h elf32.h elf64.h cfg.h
-EXTRA_DIST = case.h core.h utils.h symb.h dis.h ana.h elf32.h elf64.h cfg.h
+staninclude_HEADERS = case.h core.h utils.h symb.h dis.h ana.h elf32.h elf64.h func.h cfg.h
+EXTRA_DIST = case.h core.h utils.h symb.h dis.h ana.h elf32.h elf64.h func.h cfg.h
 stan_SOURCES = stan.c
 #stan_CFLAGS=${CFLAGS} -Wall -O0 -std=c99 -D_GNU_SOURCE=1
 #stan_CFLAGS=${MY_CFLAGS} 
 stan_LDADD = -lcapstone -lreadline libstan.la
 lib_LTLIBRARIES = libstan.la
 libstan_la_SOURCES = case.c core.c utils.c symb.c elf64.c elf32.c \
-		   ana.c dis.c cfg.c
+		   ana.c dis.c func.c cfg.c
 
 all: all-am
 
@@ -479,6 +479,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dis.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/elf32.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/elf64.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/func.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stan.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/symb.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/utils.Plo@am__quote@

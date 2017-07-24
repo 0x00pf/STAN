@@ -942,7 +942,7 @@ stan_mem_xor (STAN_CORE *k, char *key, long addr, long addr1)
       return -1;
     }
   ptr1 = (long)(k->code + s->off + (addr1 - s->addr));  
-  printf ("Key '%s' %d\n", key, strlen(key));
+  printf ("Key '%s' %ld\n", key, strlen(key));
   l = strlen (key) >> 1;
   printf ("Key is %d bytes long... parsing\n", l);
   k1 = malloc (l);
