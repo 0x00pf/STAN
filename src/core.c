@@ -39,6 +39,7 @@
 #include "utils.h"
 #include "core.h"
 #include "symb.h"
+#include "func.h"
 
 // Binary Plug-ins
 #include "elf64.h"
@@ -597,6 +598,7 @@ stan_core_add_func (STAN_CORE *k, long addr)
 
   if ((s = _stan_core_add_sitem (k, k->func, addr, "func")))
     {
+      s->type |= STAN_SYM_TYPE_FUNC;
       s1 = (STAN_SYM*) stan_sym_clone (s);
       stan_table_add (k->sym, (STAN_ITEM*)s1);
       stan_table_sort (k->sym);
@@ -719,6 +721,7 @@ stan_core_rename_func_at (STAN_CORE *k, long addr, char *name)
   if ((s = (STAN_SYM*) stan_table_find (k->sym, addr)))
     {
       printf (" + Found Symbol %s\n", name);
+      s->type |= STAN_SYM_TYPE_FUNC;
       if (s->id) free (s->id);
       s->id = strdup (name);
       s->dump = 1;
@@ -809,6 +812,65 @@ stan_core_rename_func (STAN_CORE *k, char *name, char *name1)
   return 0;
 }
 
+int           
+stan_core_info_func (STAN_CORE *k, char *name)
+{
+  STAN_SYM *s;
+  STAN_FUNC *f;
+
+  if (!k) return -1;
+  if (!name) return -1;
+
+
+  if ((s = (STAN_SYM*) stan_table_find_by_name (k->sym, name)) == NULL)
+    {
+      fprintf (stderr, "Function '%s' unknown\n", name);
+      return -1;
+    }
+  if (s->type != STAN_SYM_TYPE_FUNC)
+    {
+      fprintf (stderr, "Symbol '%s' is not a function\n", name);
+      return -1;
+    }
+  if ((f = (STAN_FUNC*) stan_sym_get_data (s)) == NULL)
+    {
+      fprintf (stderr, "Function '%s' has not been analysed... Try dis.function first\n", name);
+      return -1;
+    }
+  stan_func_dump (f);
+  return 0;
+}
+
+
+int           
+stan_core_func_add_var (STAN_CORE *k, char *name, char *id, char *var)
+{
+  STAN_SYM *s;
+  STAN_FUNC *f;
+
+  if (!k) return -1;
+  if (!name) return -1;
+
+
+  if ((s = (STAN_SYM*) stan_table_find_by_name (k->sym, name)) == NULL)
+    {
+      fprintf (stderr, "Function '%s' unknown\n", name);
+      return -1;
+    }
+  if (s->type != STAN_SYM_TYPE_FUNC)
+    {
+      fprintf (stderr, "Symbol '%s' is not a function\n", name);
+      return -1;
+    }
+  if ((f = (STAN_FUNC*) stan_sym_get_data (s)) == NULL)
+    {
+      fprintf (stderr, "Function '%s' has not been analysed... Try dis.function first\n", name);
+      return -1;
+    }
+  printf ("Adding local variable %s (%s) to function %s\n", var, id, name);
+  stan_func_rename_lsym (f, id, var);
+  return 0;
+}
 
 int           
 stan_core_rename_label (STAN_CORE *k, char *name, char *name1)
@@ -864,6 +926,7 @@ stan_core_def_func (STAN_CORE *k, char *name, long addr)
       return -1;
     }
   s = stan_sym_new (name, addr);
+  s->type |= STAN_SYM_TYPE_FUNC;
   s->dump = 1;
   stan_table_add (k->func, (STAN_ITEM*) s);
   stan_table_sort (k->func);

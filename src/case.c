@@ -30,6 +30,7 @@
 #include "core.h"
 #include "dis.h"
 #include "symb.h"
+#include "func.h"
 #include "utils.h"
 
 /* Constructor/Destructor */
@@ -120,6 +121,7 @@ stan_case_save (STAN_CASE *c, char *fname, int patch)
   FILE         *f;
   int          i, j, n;
   STAN_SYM     *s;
+  STAN_FUNC    *_f;
   STAN_COMMENT *com;
 
   char *fname1;
@@ -143,6 +145,17 @@ stan_case_save (STAN_CASE *c, char *fname, int patch)
       s = (STAN_SYM*) c->k->sym->p[i];
       if (s->dump)
 	fprintf (f, "S:%s:%p\n", s->id, (void*)s->addr);
+      if (s->p) // If private data is set)
+	{
+	  _f = (STAN_FUNC*)s->p;
+	  fprintf (f, "D:%s:%p:%p\n", s->id, _f->start, _f->end);
+	  for (j = 0; j < _f->n_lsym; j++)
+	    {
+	      if (strcmp (_f->lsym[j].id, _f->lsym[j].name))
+		fprintf (f, "V:%s:%s:%s\n", 
+			 s->id, _f->lsym[j].id, _f->lsym[j].name);
+	    }
+	}
     }
   // Dump Renamed Labels
   n = c->k->label->n;
@@ -254,6 +267,40 @@ stan_case_load (STAN_CASE *c, char *fname)
 	    if (stan_core_rename_func_at (c->k, addr, name) < 0)
 	      stan_core_def_func (c->k, name, addr);
 	    printf ("-> FUNCTION: '%s' '%p'\n", name, (void*)addr);
+	    break;
+
+	  }
+	case 'D':   // Function data
+	  {
+	    char *name, *saddr;
+	    long addr;
+	    name = strtok (buffer + 2, ":");
+	    saddr = strtok (NULL, ":");
+	    addr =strtol (saddr + 2, NULL, 16);
+	    if ((s = (STAN_SYM*) stan_table_find (c->k->sym, addr)))
+	      {
+	        //s->type |= STAN_SYM_TYPE_FUNC;
+		if (s->p) break; // If the function is already created skip
+		// Otherwise initialise it to allow variable renaming
+		stan_dis_func (c->k, name);
+	      }
+	    else
+	      {
+		fprintf (stderr, "- ERROR. Symbol '%s' does not exti\n", name);
+	      }
+	    break;
+
+	  }
+	case 'V':
+	  {
+	    char *fname, *name, *id;
+	    long addr;
+
+	    fname = strtok (buffer + 2, ":");
+	    id= strtok (NULL, ":");
+	    name = strtok (NULL, ":");
+
+	    stan_core_func_add_var (c->k, fname, id, name);
 	    break;
 
 	  }

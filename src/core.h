@@ -229,6 +229,9 @@ extern "C" {
   STAN_SYM*     stan_core_get_closest_symbol (STAN_CORE *k, long addr);
   // Patches
   int           stan_core_add_patch (STAN_CORE *k, long off, int len, unsigned char*data);
+  // Functions
+  int           stan_core_info_func (STAN_CORE *k, char *name);
+  int           stan_core_func_add_var (STAN_CORE *k, char *name, char *id, char *var);
 #ifdef __cplusplus
 }
 #endif

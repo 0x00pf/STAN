@@ -29,7 +29,9 @@ stan_func_new (STAN_SYM *s)
 {
   STAN_FUNC  *f;
 
+
   if (!s) return NULL;
+  if ((f = (STAN_FUNC*)stan_sym_get_data (s))) return f;
   if ((f = (STAN_FUNC*) malloc (sizeof(STAN_FUNC))) == NULL) return NULL;
   memset (f, 0, sizeof(STAN_FUNC));
   // Initialise function
@@ -38,7 +40,7 @@ stan_func_new (STAN_SYM *s)
   f->start = s->addr;
   f->count = 0;
   f->n_lsym = 0;
-
+  f->s->dump = 1;
   // Add this info to the current symbol
   stan_sym_set_data (s, f);
 
@@ -64,7 +66,7 @@ stan_func_free (STAN_FUNC *f)
   // Unlink from associated symbol
   stan_sym_set_data (f->s, NULL);
   free (f);
- 
+
   return 0;
 }
 
@@ -91,7 +93,6 @@ stan_func_clear (STAN_FUNC *f)
   f->count = 0;
   f->n_lsym = 0;
   f->flag = STAN_FUNC_NOT_INIT;
- 
   return 0;
 }
 
@@ -102,6 +103,7 @@ stan_func_set_end (STAN_FUNC *f, long end)
   if (!f) return -1;
   if (end < f->start) return -1;
   f->end = end;
+  f->s->dump = 1;
   return 0;
 }
 
@@ -114,14 +116,14 @@ stan_func_set_state (STAN_FUNC *f, int flag)
 }
 
 STAN_LSYM*
-stan_func_get_lsym (STAN_FUNC *f, int off)
+stan_func_get_lsym (STAN_FUNC *f, char *id)
 {
   int i, n;
   
   if (!f) return 0;
   n = f->n_lsym;
   for (i = 0; i < n; i++)
-    if (f->lsym[i].off == off) return &f->lsym[i];
+    if (!strcmp (f->lsym[i].id, id)) return &f->lsym[i];
 
   return NULL;
 }
@@ -141,23 +143,25 @@ stan_func_get_lsym_by_name (STAN_FUNC *f, char *name)
 
 
 int          
-stan_func_add_lsym (STAN_FUNC *f, char *name, int off)
+stan_func_add_lsym (STAN_FUNC *f, char *id, char *name)
 {
   STAN_LSYM  *t, *aux;
   int         n;
  
   if (!f) return -1;
   if (!name) return -1;
+  if (!id) return -1;
 
+  f->s->dump = 1;
   // Check if symbol already exists....
-
+  if (stan_func_get_lsym (f, id)) return 0;
   // Add entry for the new symbol
   t = f->lsym;
   n = f->n_lsym;
   if ((aux = realloc (t, sizeof(STAN_LSYM) * (n + 1))) == NULL) return -1;
   f->lsym = aux;
 
-  f->lsym[n].off = off;
+  f->lsym[n].id = strdup (id);
   f->lsym[n].name = strdup (name);
   f->n_lsym ++;
   
@@ -173,6 +177,7 @@ stan_func_rename_lsym (STAN_FUNC *f, char *old_name, char *new_name)
   if (!old_name) return -1;
   if (!new_name) return -1;
 
+  f->s->dump = 1;
   if (!(s = stan_func_get_lsym_by_name (f, old_name))) return -1;
 
   if (s->name) free (s->name);
@@ -182,3 +187,24 @@ stan_func_rename_lsym (STAN_FUNC *f, char *old_name, char *new_name)
 }
 
   
+int          
+stan_func_dump (STAN_FUNC *f)
+{
+  int i;
+
+  if (!f) return -1;
+  // Find symbol
+  printf ("Function %s Info:\n", f->s->id);
+  printf (" State         : %s\n", 
+	  (f->flag == STAN_FUNC_NOT_INIT) ? "Not Analysed" : "Analysed");
+  printf (" Start Address : %p\n", f->start);
+  printf (" End Address   : %p\n", f->end);
+  printf (" Number of Inst: %d\n", f->count);
+  printf (" Number of vars: %d\n", f->n_lsym);
+  for (i = 0; i < f->n_lsym; i++)
+    {
+      printf ("  [%02d] %s @ %s \n", i, f->lsym[i].id, f->lsym[i].name);
+    }
+  return 0;
+}
+

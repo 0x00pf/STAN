@@ -40,8 +40,8 @@
 
 typedef struct stan_lsym_t
 {
-  int   off;     // Local vars and params are stored in stack
-  char  *name;            // user assigned name
+  char  *id;     // STAN Generated Local vars and params are stored in stack
+  char  *name;   // user assigned name
 } STAN_LSYM;
 
 typedef struct stan_func_t
@@ -68,9 +68,12 @@ extern "C" {
 
   int          stan_func_set_end (STAN_FUNC *f, long end);
   int          stan_func_set_state (STAN_FUNC *f, int flag);
-  STAN_LSYM*   stan_func_get_lsym (STAN_FUNC *f, int off);
-  int          stan_func_add_lsym (STAN_FUNC *f, char *name, int off);
+  STAN_LSYM*   stan_func_get_lsym (STAN_FUNC *f, char *id);
+  int          stan_func_add_lsym (STAN_FUNC *f, char *id, char *name);
   int          stan_func_rename_lsym (STAN_FUNC *f, char *old_name, char *new_name);
+
+  int          stan_func_dump (STAN_FUNC *f);
+
   
 #ifdef __cplusplus
 }

@@ -72,6 +72,8 @@ static STAN_CMD cmd[] = {
   {"mem.poke", "Writes to memory.Ex:   mem.poke [x|p] addr value.\n\t\t   fmt = x : writes hex string\n\t\t   fmt = p : Writes pointer\n"},
   {"mem.xor", "Xors memory with a key.Ex:   mem.xor key addr1 addr2\n"},
   {"func.def", "Defines a function at the specified address. Ex: func.def function_name addr\n"},
+  {"func.info", "Shows function information\n"},
+  {"func.var", "Defines a local var for ths specified function. Ex: func.var function id name\n"},
   {"sym.def", "Defines a symbol at the specified address. Ex: sym.def symbol_name addr\n"},
   {"help.abi", "Shows current ABI for the loaded core\n"},
   {"help", "Shows command help\n"},
@@ -383,6 +385,57 @@ run_cmd (STAN_CASE *c, char *buffer1)
       printf ("+ Defining new funcion '%s'@%p\n", name1, (void*)addr);
       stan_core_def_func (c->k, name1, addr);
     }
+  else if (!strncasecmp (buffer, "func.info", strlen ("func.info")))
+    {
+      char name1[1024];
+      long addr;    // XXX: Maybe we should make all address void * ??
+      int  nargs;
+      if (strlen(buffer) == strlen(cmd[cmd_indx].id))
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+
+
+      // FIXME:... what can I say... I'm feeling lazy
+      //       Just minimal functionality  
+      char *aux= buffer + strlen ("func.def ");
+      nargs = sscanf (aux, "%s", name1);
+      if (nargs != 1)
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+
+      stan_core_info_func (c->k, name1);
+    }
+  else if (!strncasecmp (buffer, "func.var", strlen ("func.var")))
+    {
+      char name1[1024];
+      char id[1024];
+      char vname[1024];
+      long addr;    // XXX: Maybe we should make all address void * ??
+      int  nargs;
+      if (strlen(buffer) == strlen(cmd[cmd_indx].id))
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+
+
+      // FIXME:... what can I say... I'm feeling lazy
+      //       Just minimal functionality  
+      char *aux= buffer + strlen ("func.var ");
+      nargs = sscanf (aux, "%s %s %s", name1, id, vname);
+      if (nargs != 3)
+	{
+	  printf ("\t%s", cmd[cmd_indx].help);
+	  return 0;
+	}
+
+      stan_core_func_add_var (c->k, name1, id, vname);
+    }
+
   else if (!strncasecmp (buffer, "sym.def", strlen ("sym.def")))
     {
       char name1[1024];
@@ -603,6 +656,8 @@ cmd_completion(const char *text, int start, int end)
   if (start == 0)
     matches = (char **) rl_completion_matches (text, cmd_generator);
   else if (!strncmp (current, "dis.function ", strlen ("dis.function ")) ||
+	   !strncmp (current, "func.info ", strlen ("func.info ")) ||
+	   !strncmp (current, "func.var ", strlen ("func.var ")) ||
 	   !strncmp (current, "func.rename ", strlen ("func.rename "))
 	   )
     {

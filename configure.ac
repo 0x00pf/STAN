@@ -15,7 +15,7 @@ dnl  You should have received a copy of the GNU General Public License
 dnl  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 dnl 
 
-AC_INIT([stan], 0.6.4, [@0x00pico])
+AC_INIT([stan], 0.7.1, [@0x00pico])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 
 AC_CONFIG_SRCDIR([src/stan.c])

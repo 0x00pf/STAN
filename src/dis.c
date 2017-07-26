@@ -30,6 +30,7 @@
 #include "core.h"
 #include "ana.h"
 #include "dis.h" 
+#include "func.h"
 
 #define COM_COL 45
 #define COM_COL1 COM_COL + 1
@@ -51,6 +52,8 @@ char *mnemonic_color[] = {
   BG_MAGENTA,  // STAN_IMETA_SYSCALL
   NULL
 };
+
+STAN_FUNC *_f;
 
 /* Local functions */
 /****************************************************/
@@ -103,8 +106,18 @@ _stan_dis_op (STAN_CORE *k, STAN_SEGMENT *s, int i)
 		   )
 	    {
 	      int a = 4;
-	      int b = detail->x86.operands[j].mem.disp % 4;
+	      int b = detail->x86.operands[j].mem.disp;
+	      char id[1024];
+	      snprintf (id, 1024, "ls_%s%+d", cs_reg_name (k->handle, detail->x86.operands[j].mem.base), b);
 	      nl = 1;
+	      STAN_LSYM *s = stan_func_get_lsym (_f, id);
+	      if (!s)
+		stan_func_add_lsym (_f, id, id);
+	      else
+		strcpy (id, s->name);
+
+	      printf ("; "BG_RED "{%s}"RESET, id);
+#if 0
 	      if (detail->x86.operands[j].mem.disp < 0)
 		{
 		  if (b)
@@ -123,7 +136,7 @@ _stan_dis_op (STAN_CORE *k, STAN_SEGMENT *s, int i)
 		    printf ("; "BG_RED "{par_%ld}"RESET,
 			    (detail->x86.operands[j].mem.disp)/a - 1); 
 		}
-
+#endif
 	    }
 	  else 
 	    {
@@ -332,11 +345,13 @@ stan_dis_func (STAN_CORE *k, char *sname)
   size_t       count;
   int          j;
   STAN_SYM     *f;
+  STAN_SYM     *_s;
   STAN_SYM     *_s1;
 
   if (!k) return -1;
   if (!sname) return -1;
 
+  _s = NULL;
   /* Find function by name*/
   if ((f = (STAN_SYM*) stan_table_find_by_name (k->func, sname)) == NULL)
     {
@@ -345,6 +360,10 @@ stan_dis_func (STAN_CORE *k, char *sname)
 	  fprintf (stderr, "- Cannot find function '%s'\n", sname);
 	  return -1;
 	}
+    }
+  if ((_s = (STAN_SYM*) stan_table_find_by_name (k->sym, sname)) == NULL)
+    {
+      fprintf (stderr, "- This function does not have an associated symbol!!!\n");
     }
   if ((s = stan_core_find_func_section (k, f->addr)) == NULL)
     {
@@ -364,9 +383,21 @@ stan_dis_func (STAN_CORE *k, char *sname)
   // XXX: We are calculating the segment to get the address and we do it
   //      again inside the ANA module... 
   // TODO: Write a proper function to avoid double work
+
+  if (_s)  // If we have an associated symbol
+    {
+
+      _f = stan_func_new (_s);
+      // Create function object
+      // Initialise some info
+      
+    }
+
+
+
   printf ("+ Disassembling function %s@%p\n", sname, (void*) f->addr);
   long addr1;
-  addr1 = stan_ana_process_addr (k, f->addr);
+  addr1 = stan_ana_process_addr (k, f->addr, _f->count);
   if (addr1 != f->addr) f->addr = addr1;
   // ----
   // Now the core contains the disassembly and metadata for the
@@ -418,9 +449,14 @@ stan_dis_func (STAN_CORE *k, char *sname)
 
       cnt++;
     }
-
+  if (_s)
+    {
+      _f->count = cnt;
+      stan_func_set_end (_f, k->ins[j].address);
+      stan_func_set_state (_f, STAN_FUNC_INIT);
+    }
   stan_ana_close_dis (k);
-
+  _f = NULL;
   return 0;
 }
 
@@ -512,7 +548,7 @@ stan_dis_addr (STAN_CORE *k, long addr, size_t count)
   //      again inside the ANA module... 
   // TODO: Write a proper function to avoid double work
   printf ("+ Disassembling function @%p\n", (void*) addr);
-  stan_ana_process_addr (k, addr);
+  stan_ana_process_addr (k, addr, count);
   // ----
   // Now the core contains the disassembly and metadata for the
   // indicated address (the function)

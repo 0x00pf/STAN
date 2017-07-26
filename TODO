@@ -1,6 +1,13 @@
 ** Keep Changelog up to date :)
 TODO
 ------------
+* Properly processing symbols types
+* Function support code to work with redefined functions
+* rename local vars based on user assigne id  (and not internal id)
+* Case... save/load function details
+* Add set.function command, so we do not have to enter the function name every time
+  when working in a function
+
 * Update disassembly approach
   - Ideas for the global analyser
     - If symbols are available process them

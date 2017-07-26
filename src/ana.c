@@ -239,15 +239,16 @@ stan_ana_process_section ( STAN_CORE *k, STAN_SEGMENT *s)
 
 
 long
-stan_ana_process_addr (STAN_CORE *k, long addr)
+stan_ana_process_addr (STAN_CORE *k, long addr, long count1)
 {
   STAN_SEGMENT *s;
   int           i;
   csh           handle;
-  long          rel, addr1;
+  long          rel, addr1, count;
 
   if (!k) return -1;
   if (k->valid != STAN_CORE_VALID) return -1;
+
 
   printf ("+ Analysing addres %p\n", (void*) addr);
   handle = k->handle;
@@ -267,7 +268,7 @@ stan_ana_process_addr (STAN_CORE *k, long addr)
   addr1 = _stan_configure_arm (k, addr);
   rel = addr - s->addr;
   k->count = cs_disasm(handle, k->code + s->off + rel, 
-		       s->size - rel, addr1, 0, &k->ins);
+		       s->size - rel, addr1, count1, &k->ins);
   printf ("  * Analysing %ld instructions at (%p)\n", k->count, (void*)addr1);
   // here we have got the code... now we can analyse it
   // whatever it is
@@ -364,7 +365,7 @@ stan_ana_init (STAN_CORE *k)
     }
 
   // Process entry point
-  stan_ana_process_addr (k, k->ep);
+  stan_ana_process_addr (k, k->ep, 0);
   stan_ana_process_ep (k);
 
   stan_table_sort (k->func);

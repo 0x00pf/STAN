@@ -179,8 +179,12 @@ stan_elf64_process_rela (STAN_CORE *k, Elf64_Shdr* s)
 #ifdef DEBUG      
       printf ("** Rela.... [%d] %p, %d\n", i, rel->r_offset, indx);
 #endif
-      ssym = (STAN_SYM *) k->dsym->p[indx];
-      ssym->addr = rel->r_offset;
+      if (k->dsym->p)
+	{
+	  ssym = (STAN_SYM *) k->dsym->p[indx];
+
+	  ssym->addr = rel->r_offset;
+	}
     }
 }
 
